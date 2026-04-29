@@ -3,7 +3,7 @@ package handlers
 import (
 	"encoding/json"
 	"net/http"
-	"fantasy_mma_backend/database"
+	"fantasy/database"
 )
 
 type Card struct {

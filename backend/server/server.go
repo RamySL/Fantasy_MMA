@@ -7,8 +7,7 @@ package server
 import (
     "fmt"
     "net/http"
-    "fantasy_mma_backend/database"
-    "fantasy_mma_backend/handlers"
+    "fantasy/handlers"
 )
 
 func hello(w http.ResponseWriter, req *http.Request) {
@@ -26,8 +25,6 @@ func headers(w http.ResponseWriter, req *http.Request) {
 }
 
 func Start() {
-    database.InitDB()
-
     http.HandleFunc("/hello", hello)
     http.HandleFunc("/headers", headers)
     http.HandleFunc("/cards", handlers.GetCards)

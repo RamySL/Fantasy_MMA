@@ -1,4 +1,4 @@
-module fantasy_mma_backend
+module fantasy
 
 go 1.26.2
 

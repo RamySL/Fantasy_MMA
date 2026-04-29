@@ -1,7 +1,11 @@
 package main
 
-import "fantasy_mma_backend/server"
+//import "fantasy/server"
+import "fantasy/espn"
+
 
 func main(){
-	server.Start()
+	//database.InitDB()
+	//server.Start()
+	espn.Fetch()
 }
