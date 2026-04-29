@@ -1,4 +1,4 @@
-package main
+package server
 
 /*
  * ce Squellette est pris de : https://gobyexample.com/http-servers 
@@ -7,6 +7,7 @@ package main
 import (
     "fmt"
     "net/http"
+    "fantasy_mma_backend/database"
 )
 
 func hello(w http.ResponseWriter, req *http.Request) {
@@ -23,7 +24,8 @@ func headers(w http.ResponseWriter, req *http.Request) {
     }
 }
 
-func main() {
+func Start() {
+    database.InitDB()
 
     http.HandleFunc("/hello", hello)
     http.HandleFunc("/headers", headers)
