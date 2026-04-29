@@ -2,19 +2,16 @@ package main
 
 //import "fantasy/server"
 import (
+	"fantasy/database"
 	"fantasy/espn"
-	"fmt"
 	"log"
 )
 
 func main(){
-	//database.InitDB()
+	database.InitDB()
 	//server.Start()
-	scoreboard, err := espn.Fetch()
-	if err != nil {
-		log.Fatal(err)
+	err := espn.Sync()
+	if (err != nil){
+		log.Printf("Erreur lors de sync : %s" , err)
 	}
-
-	fmt.Println(scoreboard.Season.Year)
-	fmt.Println(scoreboard.Events[0].Name)
 }

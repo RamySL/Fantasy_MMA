@@ -21,7 +21,6 @@ func FetchByDate(date string) (ESPNScoreboardResponse, error) {
 
 func fetchScoreboard(endpoint string) (ESPNScoreboardResponse, error) {
 	var scoreboard ESPNScoreboardResponse
-
 	resp, err := http.Get(endpoint)
 	if err != nil {
 		return scoreboard, fmt.Errorf("appel ESPN impossible: %w", err)
