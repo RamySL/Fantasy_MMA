@@ -53,12 +53,15 @@ https://github.com/pseudo-r/Public-ESPN-API/blob/main/docs/sports/mma.md
   - titre
   - endroit (Pays, ville ...)
   - date
-  - status
+  - status (annulé, programmé ..)
+  - compledted
 
 - Combat
   - ID (clé prim)
   - external_id
   - carte_id
+  - status (annulé, programmé ..)
+  - compledted
   - combattant_id_1
   - combattant_id_2
   - combattant_id_gagnant (req API)
