@@ -8,6 +8,7 @@ import (
     "fmt"
     "net/http"
     "fantasy_mma_backend/database"
+    "fantasy_mma_backend/handlers"
 )
 
 func hello(w http.ResponseWriter, req *http.Request) {
@@ -29,6 +30,7 @@ func Start() {
 
     http.HandleFunc("/hello", hello)
     http.HandleFunc("/headers", headers)
+    http.HandleFunc("/cards", handlers.GetCards)
 
     http.ListenAndServe(":8090", nil)
 }
