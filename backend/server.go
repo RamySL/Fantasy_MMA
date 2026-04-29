@@ -1,7 +1,7 @@
 package main
 
 /*
-ce Squellette est pris de : https://gobyexample.com/http-servers 
+ * ce Squellette est pris de : https://gobyexample.com/http-servers 
 */
 
 import (

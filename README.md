@@ -6,7 +6,7 @@ Application Web qui consiste en une plateforme de prédiction de résultats de c
 
 ## API Web utilisée
 
-https://www.thesportsdb.com/
+https://github.com/pseudo-r/Public-ESPN-API/blob/main/docs/sports/mma.md
 
 ## Fonctionnalités de l’application
 
@@ -49,13 +49,15 @@ https://www.thesportsdb.com/
 
 - Carte (req API)
   - id (clé prim)
+  - external_id (API)
   - titre
-  - endroit (Pays, ville)
+  - endroit (Pays, ville ...)
   - date
   - status
 
 - Combat
   - ID (clé prim)
+  - external_id
   - carte_id
   - combattant_id_1
   - combattant_id_2
@@ -66,8 +68,8 @@ https://www.thesportsdb.com/
 - Combattant
   - id
   - nom
-  - prenom
   - catégorie
+  - record
 
 ## Protocole 
 
