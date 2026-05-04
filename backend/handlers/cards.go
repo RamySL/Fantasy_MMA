@@ -1,7 +1,7 @@
 package handlers
 
 import (
-	"encoding/json"
+	"log"
 	"net/http"
 	"fantasy/database"
 	"strings"
@@ -9,19 +9,20 @@ import (
 
 func GetCards(w http.ResponseWriter, req *http.Request) {
 	if req.Method != http.MethodGet {
-		http.Error(w, "cards.GetCards : Méthode non autorisée", http.StatusMethodNotAllowed)
+		writeJsonError(w, http.StatusMethodNotAllowed, "Méthode non autorisée")
 		return
 	}
 
 	rows, err := database.DB.Query(`
-		SELECT id, external_id, title, date::text, status, completed,
+		SELECT id, external_i, title, date::text, status, completed,
 		       COALESCE(venue_name, ''), COALESCE(city, ''), 
 		       COALESCE(region, ''), COALESCE(country, '')
 		FROM cards
 		ORDER BY date ASC
 	`)
 	if err != nil {
-		http.Error(w, "cards.GetCards : Erreur lecture cards", http.StatusInternalServerError)
+		log.Printf("handlers.GetCards: erreur query cards: %v", err)
+		writeJsonError(w, http.StatusInternalServerError, "Erreur serveur interne")
 		return
 	}
 	defer rows.Close()
@@ -44,15 +45,15 @@ func GetCards(w http.ResponseWriter, req *http.Request) {
 			&card.Country,
 		)
 		if err != nil {
-			http.Error(w, "cards.GetCards : Erreur scan card", http.StatusInternalServerError)
+			log.Printf("handlers.GetCards: erreur scan card: %v", err)
+			writeJsonError(w, http.StatusInternalServerError, "Erreur serveur interne")
 			return
 		}
 
 		cards = append(cards, card)
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(cards)
+	writeJsonResponse(w, http.StatusOK, cards)
 }
 
 func GetCardsRoutes(w http.ResponseWriter, req *http.Request){
@@ -75,7 +76,7 @@ func GetCardsRoutes(w http.ResponseWriter, req *http.Request){
 
 func getCardByID(w http.ResponseWriter, req *http.Request, id string) {
 	if req.Method != http.MethodGet {
-		http.Error(w, "cards.getCardByID : Méthode non autorisée", http.StatusMethodNotAllowed)
+		writeJsonError(w, http.StatusMethodNotAllowed, "Méthode non autorisée")
 		return
 	}
 
@@ -103,18 +104,18 @@ func getCardByID(w http.ResponseWriter, req *http.Request, id string) {
 		&card.Country,
 	)
 	if err != nil {
-		http.Error(w, "cards.getCardByID : Erreur scan card", http.StatusInternalServerError)
+		log.Printf("cards.getCardByID : Erreur scan card %v", err)
+		writeJsonError(w, http.StatusInternalServerError, "Erreur serveur interne")
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(card)
+	writeJsonResponse(w, http.StatusOK, card)
 
 }
 
 func getCardFights(w http.ResponseWriter, req *http.Request, id string){
 	if req.Method != http.MethodGet {
-		http.Error(w, "cards.getCardByID : Méthode non autorisée", http.StatusMethodNotAllowed)
+		writeJsonError(w, http.StatusMethodNotAllowed, "Méthode non autorisée")
 		return
 	}
 
@@ -146,7 +147,8 @@ func getCardFights(w http.ResponseWriter, req *http.Request, id string){
 	)
 
 	if err != nil {
-		http.Error(w, "cards.getCardFights : Erreur lecture ", http.StatusInternalServerError)
+		log.Printf("cards.getCardFights : Erreur lecture %v", err)
+		writeJsonError(w, http.StatusInternalServerError, "Erreur serveur interne")
 		return
 	}
 	defer rows.Close()
@@ -173,7 +175,8 @@ func getCardFights(w http.ResponseWriter, req *http.Request, id string){
 			&fight.Winner,
 		)
 		if err != nil {
-			http.Error(w, "cards.getCardFights : Erreur scan card", http.StatusInternalServerError)
+			log.Printf("cards.getCardFights : Erreur scan card %v", err)
+			writeJsonError(w, http.StatusInternalServerError, "Erreur serveur interne")
 			return
 		}
 
@@ -181,7 +184,6 @@ func getCardFights(w http.ResponseWriter, req *http.Request, id string){
 
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(fights)
+	writeJsonResponse(w, http.StatusOK, fights)
 
 }

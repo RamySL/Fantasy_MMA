@@ -2,6 +2,10 @@ package handlers
 
 import "database/sql"
 
+/*
+	- Type pour passage entre BD -> Json pour les requêtes.
+*/
+
 type Card struct {
 						// json friendly naming
 	ID         int    `json:"id"`
