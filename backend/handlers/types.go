@@ -36,3 +36,22 @@ type Fight struct {
     Fighter2             Fighter        `json:"fighter2"`
     Winner               sql.NullInt64 	 `json:"winner_id"`
 }
+
+/* AUTH */
+
+type RegisterRequestBody struct {
+	Pseudo		string		`json:"pseudo"`
+	Email		string		`json:"email"`
+	Password	string		`json:"password"`
+}
+
+type AuthUserResponse struct {
+	ID     int    `json:"id"`
+	Pseudo string `json:"pseudo"`
+	Email  string `json:"email"`
+}
+
+type LoginRequest struct {
+	Email    string `json:"email"`
+	Password string `json:"password"`
+}

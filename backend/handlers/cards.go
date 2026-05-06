@@ -57,6 +57,11 @@ func GetCards(w http.ResponseWriter, req *http.Request) {
 }
 
 func GetCardsRoutes(w http.ResponseWriter, req *http.Request){
+
+	if req.Method != http.MethodGet {
+		writeJsonError(w, http.StatusMethodNotAllowed, "Méthode non autorisée")
+		return
+	}
 	path := strings.Trim(req.URL.Path, "/")
 	parts := strings.Split(path, "/")
 
@@ -75,10 +80,6 @@ func GetCardsRoutes(w http.ResponseWriter, req *http.Request){
 }
 
 func getCardByID(w http.ResponseWriter, req *http.Request, id string) {
-	if req.Method != http.MethodGet {
-		writeJsonError(w, http.StatusMethodNotAllowed, "Méthode non autorisée")
-		return
-	}
 
 	row := database.DB.QueryRow(`
 		SELECT id, external_id, title, date::text, status, completed,
@@ -114,10 +115,6 @@ func getCardByID(w http.ResponseWriter, req *http.Request, id string) {
 }
 
 func getCardFights(w http.ResponseWriter, req *http.Request, id string){
-	if req.Method != http.MethodGet {
-		writeJsonError(w, http.StatusMethodNotAllowed, "Méthode non autorisée")
-		return
-	}
 
 	rows, err := database.DB.Query(`
 		SELECT 

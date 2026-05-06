@@ -94,7 +94,7 @@ https://github.com/pseudo-r/Public-ESPN-API/blob/main/docs/sports/mma.md
 - **cartes**
   - /cards
   - /cards/{id}
-  - /cards/{cardId}/fights
+  - /cards/{id}/fights
 
 - **combattant**
   - /fighters
@@ -102,6 +102,22 @@ https://github.com/pseudo-r/Public-ESPN-API/blob/main/docs/sports/mma.md
 
 - **classement**
   - /ranking
+
+### Vues — besoins front, backend et API
+
+| Méthode | URI  | Vue principale|
+|---|---|---|
+| `POST` | `/auth/register` | Inscription  |
+| `POST` | `/auth/login` | Connexion  |
+| `POST` | `/auth/logout` | Déconnexion  |
+| `GET` | `/auth/me` | utilisateur  |
+| `GET` | `/cards` | Liste des cartes, dashboard  |
+| `GET` | `/cards/{id}` | Détail carte  |
+| `GET` | `/cards/{id}/fights` | Détail carte  |
+| `GET` | `/predictions`| TODO  |
+| `GET` | `/users/{id}/predictions` | Mes prédictions  |
+| `GET` | `/ranking` | Classement  |
+---
 
 ## Technologies qui seront utilisées
 
