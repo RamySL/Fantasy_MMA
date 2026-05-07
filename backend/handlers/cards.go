@@ -14,7 +14,7 @@ func GetCards(w http.ResponseWriter, req *http.Request) {
 	}
 
 	rows, err := database.DB.Query(`
-		SELECT id, external_i, title, date::text, status, completed,
+		SELECT id, external_id, title, date::text, status, completed,
 		       COALESCE(venue_name, ''), COALESCE(city, ''), 
 		       COALESCE(region, ''), COALESCE(country, '')
 		FROM cards

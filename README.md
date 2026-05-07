@@ -114,8 +114,8 @@ https://github.com/pseudo-r/Public-ESPN-API/blob/main/docs/sports/mma.md
 | `GET` | `/cards` | Liste des cartes, dashboard  |
 | `GET` | `/cards/{id}` | Détail carte  |
 | `GET` | `/cards/{id}/fights` | Détail carte  |
-| `GET` | `/predictions`| TODO  |
-| `GET` | `/users/{id}/predictions` | Mes prédictions  |
+| `POST` | `/cards/{id}/predictions`| Soummetre ses prédictions pour une carte  |
+| `GET` | `/me/predictions` | Mes prédictions  |
 | `GET` | `/ranking` | Classement  |
 ---
 
