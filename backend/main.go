@@ -9,11 +9,14 @@ import (
 )
 
 func main(){
+
 	database.InitDB()
-	server.Start()
 
 	/*err := espn.Sync()
 	if (err != nil){
 		log.Printf("Erreur lors de sync : %s" , err)
 	}*/
+
+	server.Start()
+
 }

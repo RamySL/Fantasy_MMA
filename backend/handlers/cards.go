@@ -127,8 +127,8 @@ func getCardFights(w http.ResponseWriter, req *http.Request, id string){
 	rows, err := database.DB.Query(`
 		SELECT 
 		    fights.id,
-			fights.category,
-			fights.status,
+			COALESCE(fights.category, ''),
+			COALESCE(fights.status, ''),
 			fights.completed,
 			fights.points_good_prediction,
 

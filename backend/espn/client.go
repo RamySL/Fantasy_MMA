@@ -7,6 +7,9 @@ import (
 )
 
 const baseURL = "https://site.api.espn.com/apis/site/v2/sports/mma/ufc"
+// Nom de combatants que peut renvoyer l'API pour des cartes qui n'ont pas été finalisées.
+// TBA : to be assigned
+const TbaFighterName = "TBA"
 
 // Récupere le scoreboard ESPN general de l'UFC.
 func Fetch() (ESPNScoreboardResponse, error) {
