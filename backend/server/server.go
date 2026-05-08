@@ -1,15 +1,22 @@
 package server
 
 /*
- * ce Squellette est pris de : https://gobyexample.com/http-servers 
-*/
+ * ce Squellette est pris de : https://gobyexample.com/http-servers
+ */
 
 import (
-    //"fmt"
-    "net/http"
-    "fantasy/handlers"
+	"fantasy/espn"
+	"fantasy/handlers"
+	"fmt"
+	"net/http"
 )
 
+func syncPreds(w http.ResponseWriter, req *http.Request) {
+	err := espn.SyncPredictions()
+	if err != nil {
+		fmt.Printf("Erreur sync preds %v", err)
+	}
+}
 
 func Start() {
 	// Cards
@@ -23,6 +30,12 @@ func Start() {
 	// Auth
 	http.HandleFunc("/auth/me", handlers.Me)
 	http.HandleFunc("/auth/", handlers.PostAuthRoutes)
+
+	// Ranking
+	http.HandleFunc("/ranking", handlers.Ranking)
+
+	// tests
+	http.HandleFunc("/syncPreds", syncPreds)
 
 	http.ListenAndServe(":8090", nil)
 }

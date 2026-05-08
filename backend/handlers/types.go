@@ -6,8 +6,8 @@ import "database/sql"
 	- Type pour passage entre BD -> Json pour les requêtes.
 */
 
+// TODO: à mettre dans database ?
 type Card struct {
-						// json friendly naming
 	ID         int    `json:"id"`
 	ExternalID string `json:"external_id"`
 	Title      string `json:"title"`
@@ -67,7 +67,7 @@ type CardPredictionResponse struct {
 	ID                int `json:"id"`
 	FightID           int `json:"fight_id"`
 	PredictedWinnerID int `json:"predicted_winner_id"`
-	PointsObtained   int `json:"points_obtained"`
+	PointsObtained    int `json:"points_obtained"`
 }
 
 type MyPredictionCardResponse struct {
@@ -80,6 +80,14 @@ type MyPredictionCardResponse struct {
 	GoodPredictions  int                         `json:"good_predictions"`
 	TotalPredictions int                         `json:"total_predictions"`
 	Fights           []MyPredictionFightResponse `json:"fights"`
+}
+
+type RankingEntryResponse struct {
+	Rank             int    `json:"rank"`
+	Pseudo           string `json:"pseudo"`
+	TotalPoints      int    `json:"total_points"`
+	GoodPredictions  int    `json:"good_predictions"`
+	TotalPredictions int    `json:"total_predictions"`
 }
 
 type MyPredictionFightResponse struct {

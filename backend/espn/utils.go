@@ -56,7 +56,7 @@ func getRecord(c ESPNCompetitor) string {
 	return c.Records[0].Summary
 }
 
- 
+// L'id du gagnant retourné est l'id local à la base.
 func getWinner(compet ESPNCompetition, c1 ESPNCompetitor, c1ID int, c2ID int) (sql.NullInt64){
 	if (compet.Status.Type.Completed){
 		if c1.Winner{
@@ -67,6 +67,21 @@ func getWinner(compet ESPNCompetition, c1 ESPNCompetitor, c1ID int, c2ID int) (s
 	}else{
 		return sql.NullInt64{Valid: false}
 	}
+}
+
+// L'id du gagnant retourné est l'id externe de l'API.
+// Précondition: le combat est terminé.
+func getWinnerByCompetID(competitions []ESPNCompetition, competID string) (string, bool) {
+	for _, compet := range competitions{
+		if compet.ID == competID{
+			if compet.Competitors[0].Winner {
+				return compet.Competitors[0].ID, true
+			}else{
+				return compet.Competitors[1].ID, true
+			}
+		}
+	}
+	return "", false
 }
 
 

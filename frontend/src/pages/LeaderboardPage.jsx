@@ -61,7 +61,6 @@ export default function LeaderboardPage() {
         </p>
       </div>
 
-      <ErrorMessage type="info" title="Vue modelisee" message="TODO backend: remplacer les donnees mock par GET /leaderboard." />
       {error && <ErrorMessage message={error} />}
 
       {isLoading ? (

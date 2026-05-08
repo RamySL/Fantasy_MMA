@@ -3,21 +3,19 @@ package espn
 import (
 	"database/sql"
 	"fantasy/database"
+	"fantasy/handlers"
 	"fmt"
 	"strings"
 )
 
 /* Utilisé pour synchroniser régulièrement la base de données.
-
-- Chaque carte est réalisée la nuit du samedi à dimanche. Donc par exemple Dimanche
-12h serait un bon temps pour actuliser les résultat d'une carte.
-
-- Par exemple les annonces de cartes sont faitent en millieu de semaine. Faire un fetch le jeudi.
-
 */
 
 // Fetch les cartes entières à travers l'api et insert dans la base : les cartes, les combats, les combattant.
 func Sync() error {
+
+	SyncPredictions()
+
 	tx, err := database.DB.Begin()
 	if err != nil {
 		return err
@@ -122,6 +120,92 @@ func syncFights(tx *sql.Tx, cardID int, competitions []ESPNCompetition) error {
 			return err
 		}
 	}
+	return nil
+}
+
+// Pour la prochaine carte qui a lieu, màj la table 'predictions' si la carte est terminée.
+//TODO: à simplifier avec un fichier à coté pour stocker la prochaine carte ?
+func SyncPredictions() error{
+
+	var card handlers.Card
+	// Prochaine carte non terminée dans la base
+	err := database.DB.QueryRow(`
+		SELECT id, external_id, title, date::text, status, completed,
+		       COALESCE(venue_name, ''), COALESCE(city, ''), 
+		       COALESCE(region, ''), COALESCE(country, '')
+		 FROM cards WHERE status='STATUS_FINAL' ORDER BY date DESC LIMIT 1
+	`).Scan(
+		&card.ID,
+		&card.ExternalID,
+		&card.Title,
+		&card.Date,
+		&card.Status,
+		&card.Completed,
+		&card.VenueName,
+		&card.City,
+		&card.Region,
+		&card.Country,
+	)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil
+		}
+		return err
+	}
+
+	event, err := fetchEvent(card.ExternalID)
+	if err != nil {
+		return err
+	}
+	// On regarde si la carte est terminée
+	if event.Status.Type.Completed {
+
+		var fightID, pointsGoodPrediction int 
+		var fightExternalID string
+		// A cette étape la base n'est pas màj avec winner_fighter_id
+		fightRows, err := database.DB.Query(`
+			SELECT 
+				fights.id,
+				fights.external_id,
+				fights.points_good_prediction
+				
+			FROM fights
+			WHERE card_id = $1;
+		`,
+		card.ID,
+		)
+		if err != nil {
+			return err
+		}
+		defer fightRows.Close()
+
+		for fightRows.Next(){
+			if err := fightRows.Scan(&fightID, &fightExternalID, &pointsGoodPrediction); err != nil {
+				return err
+			}
+			
+			officialWinnerExternalID, ok := getWinnerByCompetID(event.Competitions, fightExternalID)
+			if !ok {
+				continue
+			}
+			// Toutes les prédictions sur le combat 'fight_id' sont màj
+			_, err := database.DB.Exec(`
+				UPDATE predictions p
+				SET points_obtained = $1
+				FROM fighters f
+				WHERE p.fight_id = $2 
+				AND f.external_id = $3
+				AND p.predicted_winner_id = f.id
+				;
+			`,
+			pointsGoodPrediction, fightID, officialWinnerExternalID,
+			)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
 	return nil
 }
 
