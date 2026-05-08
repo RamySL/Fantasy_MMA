@@ -121,3 +121,18 @@ func deleteExpiredSessions() error {
 	return err
 }
 
+func getAuthenticatedUserID(w http.ResponseWriter, req *http.Request) (int, bool) {
+	cookie, err := req.Cookie("session_token")
+	if err != nil {
+		writeJsonError(w, http.StatusUnauthorized, "Non authentifié")
+		return -1, false
+	}
+
+	userID, err := findUserIDBySessionToken(cookie.Value)
+	if err != nil {
+		writeJsonError(w, http.StatusUnauthorized, "Session invalide ou expirée")
+		return -1, false
+	}
+
+	return userID, true
+}

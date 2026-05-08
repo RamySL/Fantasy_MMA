@@ -1,46 +1,41 @@
-import { mockMyPredictions } from "../data/mockData.js";
-
-function sleep(ms) {
-  return new Promise((resolve) => window.setTimeout(resolve, ms));
-}
+import { apiRequest } from "./api.js";
 
 export const predictionService = {
   async getMyPredictions() {
-    // TODO backend: remplacer par apiRequest("/predictions/me").
-    await sleep(250);
-    return mockMyPredictions;
+    return apiRequest("/predictions/me");
   },
 
   async getPredictionsForCard(cardId) {
-    // TODO backend: remplacer par apiRequest(`/cards/${cardId}/predictions/me`).
-    await sleep(150);
-    console.info("TODO backend: load predictions for card", cardId);
-    return [];
+    return apiRequest(`/cards/${cardId}/predictions/me`);
   },
 
   async saveCardPredictions(cardId, selectedPredictions) {
-    // On transforme l'objet local { fightId: fighterId } en tableau propre
-    // pour coller a un futur payload backend simple a traiter en Go.
-    const predictions = Object.entries(selectedPredictions).map(([fightId, fighterId]) => ({
-      fight_id: Number(fightId),
-      predicted_winner_id: Number(fighterId),
-    }));
-
-    // TODO backend: remplacer ce mock par un vrai appel, par exemple :
-    // return apiRequest(`/cards/${cardId}/predictions`, {
-    //   method: "POST",
-    //   body: { predictions },
-    // });
-    await sleep(400);
-    console.info("TODO backend: save predictions", {
-      card_id: Number(cardId),
-      predictions,
-    });
+    // selectedPredictions a cette forme :
+    // {
+    //   [fightId]: fighterId
+    // }
+    //
+    // Le backend actuel n'a pas de route bulk, donc on envoie une requete
+    // POST /predictions par combat selectionne.
+    const predictions = Object.entries(selectedPredictions)
+      .filter(([, fighterId]) => Boolean(fighterId))
+      .map(([fightId, fighterId]) => ({
+        fight_id: Number(fightId),
+        predicted_winner_id: Number(fighterId),
+      }));
+    //TODO: faire dans le backend une route qui prend une liste de prédictions.
+    await Promise.all(
+      predictions.map((prediction) =>
+        apiRequest("/predictions", {
+          method: "POST",
+          body: prediction,
+        }),
+      ),
+    );
 
     return {
       card_id: Number(cardId),
-      predictions,
-      mocked: true,
+      saved_count: predictions.length,
     };
   },
 };

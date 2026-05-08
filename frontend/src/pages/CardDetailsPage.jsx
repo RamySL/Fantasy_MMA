@@ -18,7 +18,7 @@ function getLocation(card) {
 export default function CardDetailsPage() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, isLoading: isAuthLoading } = useAuth();
   const [card, setCard] = useState(null);
   const [fights, setFights] = useState([]);
   const [selectedPredictions, setSelectedPredictions] = useState({});
@@ -31,12 +31,24 @@ export default function CardDetailsPage() {
     let isMounted = true;
 
     async function loadCardDetails() {
+      if (isAuthLoading) {
+        return;
+      }
+
       try {
-        const [cardData, fightsData, savedPredictions] = await Promise.all([
+        const [cardData, fightsData] = await Promise.all([
           cardService.getCard(id),
           cardService.getCardFights(id),
-          predictionService.getPredictionsForCard(id),
         ]);
+
+        let savedPredictions = [];
+
+        // La route /cards/:id/predictions/me necessite une session.
+        // On ne l'appelle donc que si l'utilisateur est connecte,
+        // sinon la page detail resterait bloquee sur une erreur 401.
+        if (isAuthenticated) {
+          savedPredictions = await predictionService.getPredictionsForCard(id);
+        }
 
         if (!isMounted) {
           return;
@@ -45,12 +57,23 @@ export default function CardDetailsPage() {
         setCard(cardData);
         setFights(fightsData || []);
 
-        // TODO backend: quand GET /cards/:id/predictions/me existera,
-        // adapter la transformation ci-dessous selon la vraie reponse.
+        // Le backend retourne :
+        // [
+        //   {
+        //     id,
+        //     fight_id,
+        //     predicted_winner_id,
+        //     points_obtained
+        //   }
+        // ]
+        //
+        // On transforme ce tableau en objet indexe par fight_id pour que
+        // chaque carte de combat sache rapidement quel bouton selectionner.
         const selected = (savedPredictions || []).reduce((acc, prediction) => {
           acc[prediction.fight_id] = prediction.predicted_winner_id;
           return acc;
         }, {});
+
         setSelectedPredictions(selected);
       } catch (err) {
         if (isMounted) {
@@ -68,7 +91,7 @@ export default function CardDetailsPage() {
     return () => {
       isMounted = false;
     };
-  }, [id]);
+  }, [id, isAuthenticated, isAuthLoading]);
 
   const summary = useMemo(() => {
     const selectedFightIds = Object.keys(selectedPredictions);
@@ -106,7 +129,7 @@ export default function CardDetailsPage() {
 
     try {
       await predictionService.saveCardPredictions(id, selectedPredictions);
-      setSaveMessage("Predictions preparees cote front. TODO: brancher la sauvegarde backend.");
+      setSaveMessage("Predictions sauvegardees.");
     } catch (err) {
       setError(err.message || "Impossible de sauvegarder les predictions.");
     } finally {
@@ -159,12 +182,6 @@ export default function CardDetailsPage() {
           message="Tu peux consulter la carte, mais il faudra te connecter pour sauvegarder tes predictions."
         />
       )}
-
-      <ErrorMessage
-        type="info"
-        title="Vue predictions modelisee"
-        message="TODO backend: brancher le chargement des predictions existantes et la sauvegarde reelle. Les selections fonctionnent deja cote front."
-      />
 
       {error && <ErrorMessage message={error} />}
       {saveMessage && <ErrorMessage type="success" title="Pret pour le branchement" message={saveMessage} />}

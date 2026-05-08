@@ -55,3 +55,41 @@ type LoginRequest struct {
 	Email    string `json:"email"`
 	Password string `json:"password"`
 }
+
+/* PREDICTIONS */
+
+type PredictionRequestBody struct {
+	FightID           int `json:"fight_id"`
+	PredictedWinnerID int `json:"predicted_winner_id"`
+}
+
+type CardPredictionResponse struct {
+	ID                int `json:"id"`
+	FightID           int `json:"fight_id"`
+	PredictedWinnerID int `json:"predicted_winner_id"`
+	PointsObtained   int `json:"points_obtained"`
+}
+
+type MyPredictionCardResponse struct {
+	ID               int                         `json:"id"`
+	CardTitle        string                      `json:"card_title"`
+	CardDate         string                      `json:"card_date"`
+	Status           string                      `json:"status"`
+	TotalPoints      int                         `json:"total_points"`
+	PossiblePoints   int                         `json:"possible_points"`
+	GoodPredictions  int                         `json:"good_predictions"`
+	TotalPredictions int                         `json:"total_predictions"`
+	Fights           []MyPredictionFightResponse `json:"fights"`
+}
+
+type MyPredictionFightResponse struct {
+	FightID          int     `json:"fight_id"`
+	Category         string  `json:"category"`
+	Fighter1         string  `json:"fighter1"`
+	Fighter2         string  `json:"fighter2"`
+	PredictedWinner  string  `json:"predicted_winner"`
+	OfficialWinner   *string `json:"official_winner"`
+	PointsObtained   *int    `json:"points_obtained"`
+	PointsGoodPrediction  int     `json:"points_available"`
+	Status           string  `json:"status"`
+}

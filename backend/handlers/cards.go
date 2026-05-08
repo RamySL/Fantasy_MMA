@@ -56,23 +56,31 @@ func GetCards(w http.ResponseWriter, req *http.Request) {
 	writeJsonResponse(w, http.StatusOK, cards)
 }
 
-func GetCardsRoutes(w http.ResponseWriter, req *http.Request){
+func GetCardsRoutes(w http.ResponseWriter, req *http.Request) {
 
 	if req.Method != http.MethodGet {
 		writeJsonError(w, http.StatusMethodNotAllowed, "Méthode non autorisée")
 		return
 	}
+
 	path := strings.Trim(req.URL.Path, "/")
 	parts := strings.Split(path, "/")
 
 	// cards/{id}
-	if(len(parts) == 2){
+	if len(parts) == 2 {
 		getCardByID(w, req, parts[1])
 		return
 	}
+
 	// cards/{id}/fights
-	if(len(parts) == 3 && parts[2] == "fights"){
+	if len(parts) == 3 && parts[2] == "fights" {
 		getCardFights(w, req, parts[1])
+		return
+	}
+
+	// cards/{id}/predictions/me
+	if len(parts) == 4 && parts[2] == "predictions" && parts[3] == "me" {
+		GetCardPredictionsMe(w, req, parts[1])
 		return
 	}
 

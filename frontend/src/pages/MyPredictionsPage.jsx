@@ -82,13 +82,12 @@ export default function MyPredictionsPage() {
         </p>
       </div>
 
-      <ErrorMessage type="info" title="Vue modelisee" message="TODO backend: remplacer les donnees mock par GET /predictions/me." />
       {error && <ErrorMessage message={error} />}
 
       <section className="grid gap-4 sm:grid-cols-3">
         <StatCard label="Points" value={totals.points} helper={`${totals.possiblePoints} pts possibles`} />
         <StatCard label="Bons pronos" value={`${totals.good}/${totals.total}`} helper="Toutes cartes confondues" />
-        <StatCard label="Cartes jouees" value={predictionCards.length} helper="Donnees mock pour le moment" />
+        <StatCard label="Cartes jouees" value={predictionCards.length} helper="Depuis tes predictions sauvegardees" />
       </section>
 
       {isLoading ? (
