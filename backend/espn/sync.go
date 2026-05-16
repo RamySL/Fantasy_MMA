@@ -5,16 +5,37 @@ import (
 	"fantasy/database"
 	"fantasy/handlers"
 	"fmt"
+	"log"
 	"strings"
+	"time"
 )
 
-/* Utilisé pour synchroniser régulièrement la base de données.
-*/
+/* Fichier Utilisé pour synchroniser régulièrement la base de données.
+ */
+
+// Lance la synchronisation de la base de données à partir de l'API
+// à l'heure précisée et chaque period unité de temps
+func SyncTicker(lunchHour int, period time.Duration){
+	now := time.Now()
+	lunchHourDate := time.Date(now.Year(), now.Month(), now.Day(), lunchHour, 0, 0, 0, now.Location())
+	// Temps jusqu'à l'heure demandée
+	sleepDuration := time.Now().Sub(lunchHourDate)
+	time.Sleep(sleepDuration.Abs())
+	// l'heure voulu est atteinte
+	t := time.NewTicker(period)
+	for range t.C{
+		err := sync()
+		if (err != nil){
+			log.Printf("[SyncTicker] : ", err)
+		}
+	}
+}
 
 // Fetch les cartes entières à travers l'api et insert dans la base : les cartes, les combats, les combattant.
-func Sync() error {
+//TODO: améliorer pour récup moins de cartes de manière redondante
+func sync() error {
 
-	SyncPredictions()
+	syncPredictions()
 
 	tx, err := database.DB.Begin()
 	if err != nil {
@@ -86,20 +107,26 @@ func syncFights(tx *sql.Tx, cardID int, competitions []ESPNCompetition) error {
 
 	for _, competition := range competitions {
 		// Insertion combattant num 1
-		c1 := competition.Competitors[0]
-		c2 := competition.Competitors[1]
+		c1 := competition.Competitors[0];
+		c2 := competition.Competitors[1];  
 
-		if 	strings.Contains(c1.Athlete.FullName, TbaFighterName) || 
-			strings.Contains(c2.Athlete.FullName, TbaFighterName) {
+		athlete1, err := fetchAthlete(c1.ID)
+		if (err != nil) { return err }
+		athlete2, err := fetchAthlete(c2.ID)
+		if (err != nil) { return err }
+	
+
+		if 	strings.Contains(athlete1.FullName, TbaFighterName) || 
+			strings.Contains(athlete2.FullName, TbaFighterName) {
 
 			continue
 		}
 
-		c1ID, err := upsertFighter(tx, c1)
+		c1ID, err := upsertFighter(tx, athlete1, c1.Records)
 		if err != nil {
 			return err
 		}
-		c2ID, err := upsertFighter(tx, c2)
+		c2ID, err := upsertFighter(tx, athlete2, c2.Records)
 		if err != nil {
 			return err
 		}
@@ -125,7 +152,7 @@ func syncFights(tx *sql.Tx, cardID int, competitions []ESPNCompetition) error {
 
 // Pour la prochaine carte qui a lieu, màj la table 'predictions' si la carte est terminée.
 //TODO: à simplifier avec un fichier à coté pour stocker la prochaine carte ?
-func SyncPredictions() error{
+func syncPredictions() error{
 
 	var card handlers.Card
 	// Prochaine carte non terminée dans la base
@@ -133,7 +160,7 @@ func SyncPredictions() error{
 		SELECT id, external_id, title, date::text, status, completed,
 		       COALESCE(venue_name, ''), COALESCE(city, ''), 
 		       COALESCE(region, ''), COALESCE(country, '')
-		 FROM cards WHERE status='STATUS_FINAL' ORDER BY date DESC LIMIT 1
+		 FROM cards WHERE status='STATUS_SCHEDULED' ORDER BY date ASC LIMIT 1
 	`).Scan(
 		&card.ID,
 		&card.ExternalID,

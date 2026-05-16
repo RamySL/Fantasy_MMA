@@ -13,7 +13,6 @@ func Ranking(w http.ResponseWriter, req *http.Request) {
 		writeJsonError(w, http.StatusMethodNotAllowed, "Méthode non autorisée")
 		return
 	}
-
 	rows, err := database.DB.Query(`
 		SELECT
 			users.pseudo,

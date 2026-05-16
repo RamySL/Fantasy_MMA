@@ -7,12 +7,15 @@ import(
 	"log"
 )
 
-func upsertFighter (tx *sql.Tx, c ESPNCompetitor) (int, error) {
+func upsertFighter (tx *sql.Tx, athlete ESPNAthlete, records []ESPNRecord) (int, error) {
 	return database.UpsertFighter(
 		tx,
-		c.ID,
-		c.Athlete.FullName,
-		getRecord(c),
+		athlete.ID,
+		athlete.FullName,
+		getRecord(records),
+		athlete.Flag.Alt,
+		athlete.Flag.Href,
+		athlete.HeadShot.Href,
 	)
 }
 
@@ -48,12 +51,12 @@ func fetchRightDate(d string) (ESPNScoreboardResponse, error) {
 }
 
  
-func getRecord(c ESPNCompetitor) string {
-	if len(c.Records) == 0 {
+func getRecord(rs []ESPNRecord) string {
+	if len(rs) == 0 {
 		return ""
 	}
 
-	return c.Records[0].Summary
+	return rs[0].Summary
 }
 
 // L'id du gagnant retourné est l'id local à la base.

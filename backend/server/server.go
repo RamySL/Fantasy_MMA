@@ -5,18 +5,9 @@ package server
  */
 
 import (
-	"fantasy/espn"
 	"fantasy/handlers"
-	"fmt"
 	"net/http"
 )
-
-func syncPreds(w http.ResponseWriter, req *http.Request) {
-	err := espn.SyncPredictions()
-	if err != nil {
-		fmt.Printf("Erreur sync preds %v", err)
-	}
-}
 
 func Start() {
 	// Cards
@@ -33,9 +24,6 @@ func Start() {
 
 	// Ranking
 	http.HandleFunc("/ranking", handlers.Ranking)
-
-	// tests
-	http.HandleFunc("/syncPreds", syncPreds)
 
 	http.ListenAndServe(":8090", nil)
 }

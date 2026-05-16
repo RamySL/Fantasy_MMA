@@ -6,21 +6,23 @@ import (
 	"net/http"
 )
 
-const baseURL = "https://site.api.espn.com/apis/site/v2/sports/mma/ufc"
-const leaguesBaseURL = "https://sports.core.api.espn.com/v2/sports/mma/leagues/ufc"
+const siteBaseURL = "https://site.api.espn.com/apis/site/v2/sports/mma/ufc"
+const coreBaseURL = "https://sports.core.api.espn.com/v2/sports/mma"
+const leagueUFC = "/leagues/ufc"
+
 // Nom de combatants que peut renvoyer l'API pour des cartes qui n'ont pas été finalisées.
 // TBA : to be assigned
 const TbaFighterName = "TBA"
 
 // Récupere le scoreboard ESPN general de l'UFC.
 func Fetch() (ESPNScoreboardResponse, error) {
-	return fetchScoreboard(baseURL + "/scoreboard")
+	return fetchScoreboard(siteBaseURL + "/scoreboard")
 }
 
-// FetchByDate recupere le scoreboard ESPN pour une date precise.
+// Récupère le scoreboard ESPN pour une date precise.
 // Format attendu par ESPN : YYYYMMDD, par exemple "20260502".
 func FetchByDate(date string) (ESPNScoreboardResponse, error) {
-	return fetchScoreboard(baseURL + "/scoreboard?dates=" + date)
+	return fetchScoreboard(siteBaseURL + "/scoreboard?dates=" + date)
 }
 
 func fetchScoreboard(endpoint string) (ESPNScoreboardResponse, error) {
@@ -45,8 +47,9 @@ func fetchScoreboard(endpoint string) (ESPNScoreboardResponse, error) {
 func fetchEvent (id string) (ESPNEvent, error){
 
 	var event ESPNEvent
-	resp, err := http.Get(leaguesBaseURL + "/events/" + id)
-	fmt.Println("endpoint fetch event : " + baseURL + "/events/" + id )
+	url := coreBaseURL + leagueUFC + "/events/" + id
+	resp, err := http.Get(url)
+	fmt.Println("endpoint fetch event : " + url)
 	if err != nil {
 		return event, fmt.Errorf("appel ESPN impossible: %w", err)
 	}
@@ -62,4 +65,27 @@ func fetchEvent (id string) (ESPNEvent, error){
 	}
 
 	return event, nil
+}
+
+func fetchAthlete (external_id string) (ESPNAthlete, error){
+
+	url := coreBaseURL + leagueUFC  + "/athletes/" + external_id
+	var athlete ESPNAthlete
+	resp, err := http.Get(url)
+	// TODO: factorise la gestion d'erreurs
+	if err != nil {
+		return athlete, fmt.Errorf("appel ESPN impossible: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return athlete, fmt.Errorf("erreur ESPN: status HTTP %d", resp.StatusCode)
+	}
+
+	if err := json.NewDecoder(resp.Body).Decode(&athlete); err != nil{
+		return athlete, fmt.Errorf("decodage JSON ESPN impossible: %w", err)
+	}
+
+	return athlete, nil
+
 }

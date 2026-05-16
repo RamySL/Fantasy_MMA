@@ -64,18 +64,24 @@ func UpsertFighter(
 	externalID string,
 	fullName string,
 	record string,
+	country_name string,
+	country_flag string,
+	fighter_image string,
 ) (int, error) {
 	var fighterID int
 
 	query := `
 		INSERT INTO fighters (
-			external_id, full_name, record
+			external_id, full_name, record, country_name, country_flag, fighter_image
 		)
-		VALUES ($1, $2, $3)
+		VALUES ($1, $2, $3, $4, $5, $6)
 		ON CONFLICT (external_id)
 		DO UPDATE SET
 			full_name = EXCLUDED.full_name,
-			record = EXCLUDED.record
+			record = EXCLUDED.record,
+			country_name = EXCLUDED.country_name,
+			country_flag = EXCLUDED.country_flag,
+			fighter_image = EXCLUDED.fighter_image
 		RETURNING id;
 	`
 
@@ -84,6 +90,9 @@ func UpsertFighter(
 		externalID,
 		fullName,
 		record,
+		country_name, 
+		country_flag, 
+		fighter_image,
 	).Scan(&fighterID)
 
 	return fighterID, err

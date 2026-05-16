@@ -1,22 +1,19 @@
 package main
 
-//import "fantasy/server"
 import (
 	"fantasy/database"
-	//"fantasy/espn"
+	"fantasy/espn"
+	"time"
 	"fantasy/server"
-	//"log"
 )
 
 func main(){
 
 	database.InitDB()
 
-	/*err := espn.Sync()
-	if (err != nil){
-		log.Printf("Erreur lors de sync : %s" , err)
-	}*/
+	go func ()  {
+		espn.SyncTicker(12, time.Hour * 24)
+	}()
 
 	server.Start()
-
 }

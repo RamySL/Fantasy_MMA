@@ -114,24 +114,9 @@ type ESPNStatusType struct {
 
 type ESPNCompetitor struct {
 	ID      string       `json:"id"`
-	UID     string       `json:"uid"`
-	Type    string       `json:"type"`
 	Order   int          `json:"order"`
 	Winner  bool         `json:"winner"`
-	Athlete ESPNAthlete  `json:"athlete"`
 	Records []ESPNRecord `json:"records"`
-}
-
-type ESPNAthlete struct {
-	FullName    string   `json:"fullName"`
-	DisplayName string   `json:"displayName"`
-	ShortName   string   `json:"shortName"`
-	Flag        ESPNFlag `json:"flag"`
-}
-
-type ESPNFlag struct {
-	Href string `json:"href"`
-	Alt  string `json:"alt"`
 }
 
 type ESPNRecord struct {
@@ -139,4 +124,28 @@ type ESPNRecord struct {
 	Abbreviation string `json:"abbreviation"`
 	Type         string `json:"type"`
 	Summary      string `json:"summary"`
+}
+
+
+/** Athlete  */
+
+type ESPNAthlete struct {
+	ID      	string       		`json:"id"` // le même que ESPNCompetitor.ID
+	FullName    string   			`json:"fullName"`
+	DisplayName string   			`json:"displayName"`
+	ShortName   string  			`json:"shortName"`
+	Links 		[]ESPNAthleteLink	`json:"links"`
+	HeadShot	ESPNImage			`json:"headshot"`
+	Flag		ESPNImage			`json:"flag"`
+}
+
+type ESPNAthleteLink struct {
+	Href	string		`json:"href"`
+}
+
+/********/
+
+type ESPNImage struct {
+	Href	string  	`json:"href"`
+	Alt 	string		`json:"alt"`
 }
