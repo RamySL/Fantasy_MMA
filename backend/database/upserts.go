@@ -20,9 +20,9 @@ func UpsertCard(
 	city string,
 	region string,
 	country string,
-) (int, error) {
+) (Card, error) {
 
-	var cardID int
+	var card Card
 
 	query := `
 		INSERT INTO cards (
@@ -40,7 +40,7 @@ func UpsertCard(
 			city = EXCLUDED.city,
 			region = EXCLUDED.region,
 			country = EXCLUDED.country
-		RETURNING id;
+		RETURNING *;
 	`
 
 	err := tx.QueryRow(
@@ -54,9 +54,20 @@ func UpsertCard(
 		city,
 		region,
 		country,
-	).Scan(&cardID)
+	).Scan(
+		&card.ID,
+		&card.ExternalID,
+		&card.Title,
+		&card.Date,
+		&card.Status,
+		&card.Completed,
+		&card.VenueName,
+		&card.City,
+		&card.Region,
+		&card.Country,
+	)
 
-	return cardID, err
+	return card, err
 }
 
 func UpsertFighter(
@@ -143,6 +154,6 @@ func UpsertFight(
 		completed,
 		pointsGoodPrediction,
 	).Scan(&fightID)
-
+	
 	return fightID, err
 }

@@ -12,9 +12,9 @@ func main(){
 	database.InitDB()
 
 	go func ()  {
-		espn.SyncTicker(22, time.Hour * 1)
+		espn.SyncTicker(21, time.Hour * 1)
 	}()
-	//espn.Sync()
+	espn.Sync()
 
 	server.Start()
 }

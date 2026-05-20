@@ -3,7 +3,6 @@ package espn
 import (
 	"database/sql"
 	"fantasy/database"
-	"fantasy/handlers"
 	"fmt"
 	"log"
 	"strings"
@@ -44,6 +43,7 @@ func SyncTicker(lunchHour int, period time.Duration) {
 //TODO: améliorer pour récup moins de cartes de manière redondante
 func Sync() error {
 
+	// Respect de : syncPredictions.precondition
 	syncPredictions()
 
 	tx, err := database.DB.Begin()
@@ -86,7 +86,7 @@ func Sync() error {
 		}
 		
 		// Insertion de carte
-		cardID, err := database.UpsertCard(
+		card, err := database.UpsertCard(
 			tx, 
 			event.ID, 
 			event.Name, 
@@ -102,7 +102,7 @@ func Sync() error {
 			return err
 		}
 		// Insertion de combats et combattants
-		err = syncFights(tx, cardID, event.Competitions)
+		err = syncFights(tx, card, event.Competitions)
 		if err != nil {
 			return err
 		}
@@ -112,7 +112,7 @@ func Sync() error {
 }
 
 // Fetch les combats à travers l'api et remplie les tables `fighters` et `fights`
-func syncFights(tx *sql.Tx, cardID int, competitions []ESPNCompetition) error {
+func syncFights(tx *sql.Tx, card database.Card, competitions []ESPNCompetition) error {
 
 	for _, competition := range competitions {
 		// Insertion combattant num 1
@@ -140,10 +140,16 @@ func syncFights(tx *sql.Tx, cardID int, competitions []ESPNCompetition) error {
 			return err
 		}
 
+		// NOTE: Carte terminée && Combat non terminé => combat annulé.
+		//  l'API ne donne pas explicitement un STATUS_CANCELED
+		if !competition.Status.Type.Completed && card.Completed {
+			competition.Status.Type.Name = "STATUS_CANCELED"
+		}
+
 		_, err = database.UpsertFight(
 			tx, 
 			competition.ID, 
-			cardID, 
+			card.ID, 
 			c1ID,
 			c2ID,
 			getWinner(competition, c1, c1ID, c2ID),
@@ -160,10 +166,10 @@ func syncFights(tx *sql.Tx, cardID int, competitions []ESPNCompetition) error {
 }
 
 // Pour la prochaine carte qui a lieu, màj la table 'predictions' si la carte est terminée.
-//TODO: à simplifier avec un fichier à coté pour stocker la prochaine carte ?
+//TODO: à simplifier en stockant la prochaine carte ?
 func syncPredictions() error{
 
-	var card handlers.Card
+	var card database.Card
 	// Prochaine carte non terminée dans la base
 	err := database.DB.QueryRow(`
 		SELECT id, external_id, title, date::text, status, completed,
@@ -198,7 +204,8 @@ func syncPredictions() error{
 
 		var fightID, pointsGoodPrediction int 
 		var fightExternalID string
-		// A cette étape la base n'est pas màj avec winner_fighter_id
+		// H : A cette étape la base n'est pas màj avec winner_fighter_id
+		// TODO : pourquoi faire l'hypothèse H
 		fightRows, err := database.DB.Query(`
 			SELECT 
 				fights.id,
@@ -222,6 +229,7 @@ func syncPredictions() error{
 			
 			officialWinnerExternalID, ok := getWinnerByCompetID(event.Competitions, fightExternalID)
 			if !ok {
+				log.Println("[sync.syncPredictions : !ok]")
 				continue
 			}
 			// Toutes les prédictions sur le combat 'fight_id' sont màj

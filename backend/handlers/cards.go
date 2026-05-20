@@ -27,10 +27,10 @@ func GetCards(w http.ResponseWriter, req *http.Request) {
 	}
 	defer rows.Close()
 
-	cards := []Card{}
+	cards := []database.Card{}
 
 	for rows.Next() {
-		var card Card
+		var card database.Card
 
 		err := rows.Scan(
 			&card.ID,
@@ -99,7 +99,7 @@ func getCardByID(w http.ResponseWriter, req *http.Request, id string) {
 	id,
 	)
 
-	var card Card
+	var card database.Card
 	err := row.Scan(
 		&card.ID,
 		&card.ExternalID,
@@ -165,9 +165,9 @@ func getCardFights(w http.ResponseWriter, req *http.Request, id string){
 	}
 	defer rows.Close()
 
-	fights := []Fight{}
+	fights := []database.Fight{}
 	for rows.Next(){
-		var fight Fight
+		var fight database.Fight
 
 		err := rows.Scan(
 			&fight.ID,
