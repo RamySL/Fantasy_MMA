@@ -49,7 +49,6 @@ func fetchEvent (id string) (ESPNEvent, error){
 	var event ESPNEvent
 	url := coreBaseURL + leagueUFC + "/events/" + id
 	resp, err := http.Get(url)
-	fmt.Println("endpoint fetch event : " + url)
 	if err != nil {
 		return event, fmt.Errorf("appel ESPN impossible: %w", err)
 	}

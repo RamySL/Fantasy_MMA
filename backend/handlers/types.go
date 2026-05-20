@@ -24,6 +24,9 @@ type Fighter struct {
     ID       int    `json:"id"`
     FullName string `json:"full_name"`
     Record   string `json:"record"`
+	Fighter_country_name string			`json:"fighter_country_name"`
+	Fighter_country_flag_url string 	`json:"fighter_country_flag_url"`
+	Fighter_fighter_image_url string 	`json:"fighter_image_url"`
 }
 
 type Fight struct {

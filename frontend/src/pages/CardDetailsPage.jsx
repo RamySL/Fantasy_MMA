@@ -211,7 +211,7 @@ export default function CardDetailsPage() {
             ))}
           </div>
         ) : (
-          <EmptyState title="Aucun combat trouve" message="Les combats apparaitront ici quand /cards/:id/fights retournera des donnees." />
+          <EmptyState title="Aucun combat trouvé" message="Carte non annoncée encore" />
         )}
       </section>
     </div>

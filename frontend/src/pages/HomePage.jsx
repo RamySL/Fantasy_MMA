@@ -84,9 +84,6 @@ export default function HomePage() {
           <h2 className="mt-3 text-2xl font-bold text-slate-950">
             {isAuthenticated ? `Salut ${user.pseudo}` : "Connecte-toi pour sauvegarder tes choix"}
           </h2>
-          <p className="mt-3 text-sm leading-6 text-slate-600">
-            Les cartes et combats viennent deja du backend. Les predictions et le classement sont modelises pour le moment.
-          </p>
           {!isAuthenticated && (
             <Link to="/login" className="btn-primary mt-6 w-full">
               Se connecter
@@ -96,9 +93,9 @@ export default function HomePage() {
       </section>
 
       <section className="grid gap-4 sm:grid-cols-3">
-        <StatCard label="Cartes totales" value={dashboard.totalCount} helper="Depuis le backend" />
-        <StatCard label="Cartes a venir" value={dashboard.upcomingCount} helper="Predictions ouvertes selon statut" />
-        <StatCard label="Cartes terminees" value={dashboard.completedCount} helper="Resultats disponibles" />
+        <StatCard label="Cartes totales" value={dashboard.totalCount} />
+        <StatCard label="Cartes à venir" value={dashboard.upcomingCount} helper="Predictions ouvertes selon statut" />
+        <StatCard label="Cartes terminées" value={dashboard.completedCount} helper="Resultats disponibles" />
       </section>
 
       {error && <ErrorMessage message={error} />}

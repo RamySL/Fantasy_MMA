@@ -15,25 +15,34 @@ import (
 
 // Lance la synchronisation de la base de données à partir de l'API
 // à l'heure précisée et chaque period unité de temps
-func SyncTicker(lunchHour int, period time.Duration){
+func SyncTicker(lunchHour int, period time.Duration) {
 	now := time.Now()
+
 	lunchHourDate := time.Date(now.Year(), now.Month(), now.Day(), lunchHour, 0, 0, 0, now.Location())
-	// Temps jusqu'à l'heure demandée
-	sleepDuration := time.Now().Sub(lunchHourDate)
-	time.Sleep(sleepDuration.Abs())
-	// l'heure voulu est atteinte
+	// Si on éxecute après lunchHour dans la journée il faut ajusté pour avoir le bon calcul
+	if now.After(lunchHourDate) {
+		lunchHourDate = lunchHourDate.Add(24 * time.Hour)
+	}
+	sleepDuration := time.Until(lunchHourDate)
+	log.Printf("En attente de %v. Prochaine synchro prévue à : %v\n", sleepDuration, sleepDuration)
+	time.Sleep(sleepDuration)
+ 
+	// L'heure voulue est atteinte
+	log.Println("Début de la première synchronisation...") 
+	if err := Sync(); err != nil { 
+		log.Printf("[SyncTicker Erreur] : %v\n", err)
+	}
 	t := time.NewTicker(period)
-	for range t.C{
-		err := sync()
-		if (err != nil){
-			log.Printf("[SyncTicker] : ", err)
+	for range t.C {
+		log.Println("Début de la synchronisation périodique...")
+		if err := Sync(); err != nil {
+			log.Printf("[SyncTicker Erreur] : %v\n", err)
 		}
 	}
 }
-
 // Fetch les cartes entières à travers l'api et insert dans la base : les cartes, les combats, les combattant.
 //TODO: améliorer pour récup moins de cartes de manière redondante
-func sync() error {
+func Sync() error {
 
 	syncPredictions()
 
@@ -64,7 +73,7 @@ func sync() error {
 		if len(scoreBoard2.Events) == 0 {
 			return fmt.Errorf("Sync: aucun event trouvé pour la date %s", eventDate)
 		}else{
-			fmt.Println("Event trouvé pour : %s", eventDate)
+			log.Printf("Event trouvé pour : %s", eventDate)
 		}
 
 		//CAREFUL: Events est supposé être singleton

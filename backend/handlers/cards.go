@@ -135,11 +135,18 @@ func getCardFights(w http.ResponseWriter, req *http.Request, id string){
 			fighter1.id AS fighter1_id,
 			fighter1.full_name AS fighter1_full_name,
 			fighter1.record AS fighter1_record,
+			COALESCE(fighter1.country_name, '') AS fighter1_country_name,
+			COALESCE(fighter1.country_flag, '') AS fighter1_country_flag_url,
+			COALESCE(fighter1.fighter_image, '') AS fighter1_fighter_image_url,
+			
 
 			fighter2.id AS fighter2_id,
 			fighter2.full_name AS fighter2_full_name,
 			fighter2.record AS fighter2_record,
-
+			COALESCE(fighter2.country_name, '') AS fighter2_country_name,
+			COALESCE(fighter2.country_flag, '') AS fighter2_country_flag_url,
+			COALESCE(fighter2.fighter_image, '') AS fighter2_fighter_image_url,
+			
 			fights.winner_fighter_id AS winner_id
 
 		FROM fights
@@ -172,10 +179,16 @@ func getCardFights(w http.ResponseWriter, req *http.Request, id string){
 			&fight.Fighter1.ID,
 			&fight.Fighter1.FullName,
 			&fight.Fighter1.Record,
+			&fight.Fighter1.Fighter_country_name,
+			&fight.Fighter1.Fighter_country_flag_url,
+			&fight.Fighter1.Fighter_fighter_image_url,
 
 			&fight.Fighter2.ID,
 			&fight.Fighter2.FullName,
 			&fight.Fighter2.Record,
+			&fight.Fighter2.Fighter_country_name,
+			&fight.Fighter2.Fighter_country_flag_url,
+			&fight.Fighter2.Fighter_fighter_image_url,
 
 			&fight.Winner,
 		)

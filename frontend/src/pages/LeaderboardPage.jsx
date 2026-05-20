@@ -54,8 +54,7 @@ export default function LeaderboardPage() {
   return (
     <div className="space-y-6">
       <div>
-        <p className="text-sm font-semibold uppercase tracking-[0.25em] text-slate-500">Classement</p>
-        <h1 className="mt-2 text-3xl font-black tracking-tight text-slate-950">Leaderboard global</h1>
+        <p className="mt-2 text-3xl font-black tracking-tight text-slate-950">Classement</p>
         <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">
           Compare les points des participants et suis les meilleurs pronostiqueurs.
         </p>

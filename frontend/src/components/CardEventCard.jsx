@@ -14,7 +14,7 @@ export default function CardEventCard({ card }) {
     <article className="card-panel flex h-full flex-col justify-between gap-5 transition hover:-translate-y-0.5 hover:shadow-lg">
       <div>
         <div className="flex flex-wrap items-center gap-2">
-          <Badge variant={isCompleted ? "success" : "warning"}>{isCompleted ? "Terminee" : card.status || "A venir"}</Badge>
+          <Badge variant={isCompleted ? "success" : "warning"}>{isCompleted ? "Terminée" : card.status || "A venir"}</Badge>
           <span className="text-xs font-medium text-slate-500">#{card.id}</span>
         </div>
 
