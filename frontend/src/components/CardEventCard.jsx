@@ -14,13 +14,13 @@ export default function CardEventCard({ card }) {
     <article className="card-panel flex h-full flex-col justify-between gap-5 transition hover:-translate-y-0.5 hover:shadow-lg">
       <div>
         <div className="flex flex-wrap items-center gap-2">
-          <Badge variant={isCompleted ? "success" : "warning"}>{isCompleted ? "Terminée" : card.status || "A venir"}</Badge>
+          <Badge variant={isCompleted ? "success" : "warning"}>{isCompleted ? "Terminée" : "A venir"}</Badge>
           <span className="text-xs font-medium text-slate-500">#{card.id}</span>
         </div>
 
         <h3 className="mt-4 text-xl font-bold tracking-tight text-slate-950">{card.title}</h3>
         <p className="mt-3 text-sm text-slate-600">{formatDate(card.date)}</p>
-        <p className="mt-2 text-sm text-slate-500">{location || "Lieu a confirmer"}</p>
+        <p className="mt-2 text-sm text-slate-500">{location || "Lieu à confirmer"}</p>
       </div>
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">

@@ -161,7 +161,7 @@ export default function CardDetailsPage() {
         <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
           <div>
             <div className="flex flex-wrap items-center gap-2">
-              <Badge variant={card.completed ? "success" : "warning"}>{card.completed ? "Terminee" : card.status || "A venir"}</Badge>
+              <Badge variant={card.completed ? "success" : "warning"}>{card.completed ? "Terminée" : "A venir"}</Badge>
               <Badge>Carte #{card.id}</Badge>
             </div>
             <h1 className="mt-4 text-3xl font-black tracking-tight text-slate-950">{card.title}</h1>

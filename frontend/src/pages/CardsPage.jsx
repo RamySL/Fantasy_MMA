@@ -9,7 +9,7 @@ import { isUpcomingCard, sortCardsByDate } from "../utils/date.js";
 const filters = [
   { id: "all", label: "Toutes" },
   { id: "upcoming", label: "A venir" },
-  { id: "completed", label: "Terminees" },
+  { id: "completed", label: "Terminées" },
 ];
 
 export default function CardsPage() {

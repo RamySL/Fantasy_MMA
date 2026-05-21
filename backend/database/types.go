@@ -3,7 +3,7 @@ package database
 import "database/sql"
 
 /*
-	- Type pour passage entre BD -> Json.
+	- colonnes BD -> Json.
 */
 
 type Card struct {
@@ -30,6 +30,7 @@ type Fighter struct {
 
 type Fight struct {
     ID                   int            `json:"id"`
+	ExternalID 			 string 		`json:"external_id"`
     Category             string         `json:"category"`
     Status               string         `json:"status"`
     Completed            bool           `json:"completed"`
@@ -37,4 +38,19 @@ type Fight struct {
     Fighter1             Fighter        `json:"fighter1"`
     Fighter2             Fighter        `json:"fighter2"`
     Winner               sql.NullInt64 	 `json:"winner_id"`
+}
+
+/*
+	Pour rendre générique le fait de passer soit par 'sql.Tx' soit 'sql.Db'
+*/
+
+// Peut etre : 'sql.Tx' ou 'sql.Db'
+type QueryMaker interface {
+	Query(query string, args ...any) (*sql.Rows, error)
+	QueryRow(query string, args ...any) (*sql.Row)
+	Exec(query string, args ...any) (sql.Result, error)
+}
+// Peut etre : 'sql.Row' ou 'sql.Rows'
+type RowScanner interface {
+	Scan(dest ...any) error
 }

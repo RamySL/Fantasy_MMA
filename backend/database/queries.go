@@ -5,12 +5,12 @@ import (
 )
 
 /* 
-Ce fichier contient des fonctions qui font des insertions dans la base si les données n'existaient
+Des fonctions qui font des insertions dans la base si les données n'existaient
 pas avant, sinon mettent à jour la ligne sans insertion de nouvelle entrée dans la table.
 */
 
 func UpsertCard(
-	tx *sql.Tx,
+	queryMaker QueryMaker,
 	externalID string,
 	title string,
 	date string,
@@ -42,8 +42,8 @@ func UpsertCard(
 			country = EXCLUDED.country
 		RETURNING *;
 	`
-
-	err := tx.QueryRow(
+	
+	err := queryMaker.QueryRow(
 		query,
 		externalID,
 		title,
@@ -71,7 +71,7 @@ func UpsertCard(
 }
 
 func UpsertFighter(
-	tx *sql.Tx,
+	queryMaker QueryMaker,
 	externalID string,
 	fullName string,
 	record string,
@@ -96,7 +96,7 @@ func UpsertFighter(
 		RETURNING id;
 	`
 
-	err := tx.QueryRow(
+	err := queryMaker.QueryRow(
 		query,
 		externalID,
 		fullName,
@@ -110,7 +110,7 @@ func UpsertFighter(
 }
 
 func UpsertFight(
-	tx *sql.Tx,
+	queryMaker QueryMaker,
 	externalID string,
 	cardID int,
 	fighter1ID int,
@@ -142,7 +142,7 @@ func UpsertFight(
 		RETURNING id;
 	`
 
-	err := tx.QueryRow(
+	err := queryMaker.QueryRow(
 		query,
 		externalID,
 		cardID,
@@ -156,4 +156,90 @@ func UpsertFight(
 	).Scan(&fightID)
 	
 	return fightID, err
+}
+
+
+/** 
+ Cards
+*/
+
+func GetCards(queryMaker QueryMaker) (*sql.Rows, error) {
+	return queryMaker.Query(`
+		SELECT id, external_id, title, date::text, status, completed,
+		       COALESCE(venue_name, ''), COALESCE(city, ''), 
+		       COALESCE(region, ''), COALESCE(country, '')
+		FROM cards
+		ORDER BY date ASC
+	`)
+}
+
+func GetCardByID (queryMaker QueryMaker, id int) (*sql.Row) {
+	return queryMaker.QueryRow(`
+		SELECT id, external_id, title, date::text, status, completed,
+		       COALESCE(venue_name, ''), COALESCE(city, ''), 
+		       COALESCE(region, ''), COALESCE(country, '')
+		FROM cards
+		WHERE id = $1;
+	`,
+	id,
+	)
+}
+
+func GetCardFights (queryMaker QueryMaker, id int) (*sql.Rows, error){
+	return queryMaker.Query(`
+		SELECT 
+		    fights.id,
+			fights.external_id,
+			COALESCE(fights.category, ''),
+			COALESCE(fights.status, ''),
+			fights.completed,
+			fights.points_good_prediction,
+
+			fighter1.id AS fighter1_id,
+			fighter1.full_name AS fighter1_full_name,
+			fighter1.record AS fighter1_record,
+			COALESCE(fighter1.country_name, '') AS fighter1_country_name,
+			COALESCE(fighter1.country_flag, '') AS fighter1_country_flag_url,
+			COALESCE(fighter1.fighter_image, '') AS fighter1_fighter_image_url,
+			
+
+			fighter2.id AS fighter2_id,
+			fighter2.full_name AS fighter2_full_name,
+			fighter2.record AS fighter2_record,
+			COALESCE(fighter2.country_name, '') AS fighter2_country_name,
+			COALESCE(fighter2.country_flag, '') AS fighter2_country_flag_url,
+			COALESCE(fighter2.fighter_image, '') AS fighter2_fighter_image_url,
+			
+			fights.winner_fighter_id AS winner_id
+
+		FROM fights
+		JOIN fighters fighter1 ON fighter1.id = fights.fighter1_id
+		JOIN fighters fighter2 ON fighter2.id = fights.fighter2_id
+
+		WHERE card_id = $1;
+	`,
+	id,
+	)
+}
+
+func GetNextCard (qM QueryMaker) (*sql.Row) {
+	return qM.QueryRow(`
+		SELECT id, external_id, title, date::text, status, completed,
+		       COALESCE(venue_name, ''), COALESCE(city, ''), 
+		       COALESCE(region, ''), COALESCE(country, '')
+		 FROM cards WHERE status='STATUS_SCHEDULED' ORDER BY date ASC LIMIT 1
+	`)
+}
+
+/**
+Predictions
+*/
+
+func DelPredictionByFightID (qM QueryMaker, fightID int) {
+
+	qM.Exec(`
+		DELETE FROM predictions
+		WHERE predictions.fight_id = $1
+	`,
+	fightID)
 }

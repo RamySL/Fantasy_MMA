@@ -21,7 +21,7 @@ function fightBadge(status) {
   }
 
   if (status === "wrong") {
-    return <Badge variant="danger">Rate</Badge>;
+    return <Badge variant="danger">Raté</Badge>;
   }
 
   return <Badge variant="info">En attente</Badge>;

@@ -3,11 +3,11 @@ package handlers
 import (
 	"crypto/rand"
 	"crypto/sha256"
-	"encoding/hex"
 	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
-	"net/http"
 	"fantasy/database"
+	"net/http"
 	"time"
 )
 
@@ -136,3 +136,5 @@ func getAuthenticatedUserID(w http.ResponseWriter, req *http.Request) (int, bool
 
 	return userID, true
 }
+
+

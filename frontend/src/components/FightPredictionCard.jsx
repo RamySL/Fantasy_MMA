@@ -89,15 +89,19 @@ export default function FightPredictionCard({
   const winnerId = getWinnerId(fight.winner_id);
   const officialWinnerName = getFightWinnerName(fight);
   const isCompleted = Boolean(fight.completed);
-  const selectionDisabled = disabled || isCompleted;
+  const isCanceled = fight.status == "STATUS_CANCELED"
+  const selectionDisabled = disabled || isCanceled || isCompleted;
 
   return (
     <article className="card-panel">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <div className="flex flex-wrap items-center gap-2">
-            <Badge variant={isCompleted ? "success" : "info"}>
-              {isCompleted ? "Combat terminé" : fight.status || "À venir"}
+            <Badge variant={isCanceled ? "warning" : isCompleted ? "success" : "info"}>
+              {
+                isCanceled ? "Combat annulé" : 
+                  isCompleted ? "Combat terminé" :  "À venir"
+              }
             </Badge>
             {fight.category && <Badge>{fight.category}</Badge>}
           </div>

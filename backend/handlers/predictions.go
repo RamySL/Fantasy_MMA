@@ -6,7 +6,6 @@ import (
 	"fantasy/database"
 	"log"
 	"net/http"
-	"strconv"
 	"strings"
 )
 
@@ -314,7 +313,7 @@ func getMyPredictions(w http.ResponseWriter, req *http.Request) {
 }
 
 // Retourne les prédictions de l'utilisateur connecté pour une carte précise.
-func GetCardPredictionsMe(w http.ResponseWriter, req *http.Request, cardIDStr string) {
+func GetCardPredictionsMe(w http.ResponseWriter, req *http.Request, cardID int) {
 	if req.Method != http.MethodGet {
 		writeJsonError(w, http.StatusMethodNotAllowed, "Méthode non autorisée")
 		return
@@ -322,12 +321,6 @@ func GetCardPredictionsMe(w http.ResponseWriter, req *http.Request, cardIDStr st
 
 	userID, ok := getAuthenticatedUserID(w, req)
 	if !ok {
-		return
-	}
-
-	cardID, err := strconv.Atoi(cardIDStr)
-	if err != nil || cardID <= 0 {
-		writeJsonError(w, http.StatusBadRequest, "ID de carte invalide")
 		return
 	}
 

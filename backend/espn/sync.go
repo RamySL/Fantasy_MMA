@@ -42,9 +42,12 @@ func SyncTicker(lunchHour int, period time.Duration) {
 // Fetch les cartes entières à travers l'api et insert dans la base : les cartes, les combats, les combattant.
 //TODO: améliorer pour récup moins de cartes de manière redondante
 func Sync() error {
-
-	// Respect de : syncPredictions.precondition
-	syncPredictions()
+	// Note: important de récupérer la prochaine avant d'actualiser la BDD.
+	// Sinon le 'STATUS_SCHEDUDLED' sera écrasé
+	nextCard, err := database.ScanCard(database.GetNextCard(database.DB)) 
+	if err != nil {
+		return err
+	}
 
 	tx, err := database.DB.Begin()
 	if err != nil {
@@ -63,6 +66,7 @@ func Sync() error {
 	//CAREFUL: Leagues est supposé être singleton
 	calendars := scoreBoard.Leagues[0].Calendar
 	for _, calendar := range calendars {
+
 		eventDate := calendar.StartDate
 
 		scoreBoard2, err := fetchRightDate(eventDate)
@@ -107,6 +111,25 @@ func Sync() error {
 			return err
 		}
 	}
+
+	// Cohérence de la base par rapport aux combats annulé
+	cardsRows, err := database.GetCards(database.DB)
+	if err != nil {
+		//TODO: Faire partir tout de la tx ?
+		return err
+	}
+	for cardsRows.Next() {
+		card, err := database.ScanCard(cardsRows)
+		if err != nil {
+			log.Printf("[sync.Sync] : cardsRows Scan : %v", err)
+		}
+
+		assureCardCoherent(card)
+	}
+	
+	// MAJ des scores par rapports aux prédicitions
+	//TODO: erreur non catch
+	syncPredictions(nextCard)
 
 	return tx.Commit()
 }
@@ -167,55 +190,30 @@ func syncFights(tx *sql.Tx, card database.Card, competitions []ESPNCompetition) 
 
 // Pour la prochaine carte qui a lieu, màj la table 'predictions' si la carte est terminée.
 //TODO: à simplifier en stockant la prochaine carte ?
-func syncPredictions() error{
+//@precondition: BD traité par rapport aux combats annulés
+func syncPredictions(nextCard database.Card) error{
 
-	var card database.Card
-	// Prochaine carte non terminée dans la base
-	err := database.DB.QueryRow(`
-		SELECT id, external_id, title, date::text, status, completed,
-		       COALESCE(venue_name, ''), COALESCE(city, ''), 
-		       COALESCE(region, ''), COALESCE(country, '')
-		 FROM cards WHERE status='STATUS_SCHEDULED' ORDER BY date ASC LIMIT 1
-	`).Scan(
-		&card.ID,
-		&card.ExternalID,
-		&card.Title,
-		&card.Date,
-		&card.Status,
-		&card.Completed,
-		&card.VenueName,
-		&card.City,
-		&card.Region,
-		&card.Country,
-	)
-	if err != nil {
-		if err == sql.ErrNoRows {
-			return nil
-		}
-		return err
-	}
-
-	event, err := fetchEvent(card.ExternalID)
+	event, err := fetchEvent(nextCard.ExternalID)
 	if err != nil {
 		return err
 	}
 	// On regarde si la carte est terminée
 	if event.Status.Type.Completed {
-
+		
 		var fightID, pointsGoodPrediction int 
-		var fightExternalID string
-		// H : A cette étape la base n'est pas màj avec winner_fighter_id
-		// TODO : pourquoi faire l'hypothèse H
+		var fightExternalID, status string
+		// TODO : délègue la requête à database
 		fightRows, err := database.DB.Query(`
 			SELECT 
 				fights.id,
 				fights.external_id,
-				fights.points_good_prediction
+				fights.points_good_prediction,
+				fights.status
 				
 			FROM fights
 			WHERE card_id = $1;
 		`,
-		card.ID,
+		nextCard.ID,
 		)
 		if err != nil {
 			return err
@@ -223,8 +221,12 @@ func syncPredictions() error{
 		defer fightRows.Close()
 
 		for fightRows.Next(){
-			if err := fightRows.Scan(&fightID, &fightExternalID, &pointsGoodPrediction); err != nil {
+			if err := fightRows.Scan(&fightID, &fightExternalID, &pointsGoodPrediction, &status); err != nil {
 				return err
+			}
+			if status == "STATUS_CANCELED" {
+				database.DelPredictionByFightID(database.DB, fightID)
+				continue
 			}
 			
 			officialWinnerExternalID, ok := getWinnerByCompetID(event.Competitions, fightExternalID)
@@ -235,11 +237,11 @@ func syncPredictions() error{
 			// Toutes les prédictions sur le combat 'fight_id' sont màj
 			_, err := database.DB.Exec(`
 				UPDATE predictions p
-				SET points_obtained = $1
-				FROM fighters f
-				WHERE p.fight_id = $2 
-				AND f.external_id = $3
-				AND p.predicted_winner_id = f.id
+					SET points_obtained = $1
+				FROM 	fighters f
+				WHERE 	p.fight_id = $2 
+						AND f.external_id = $3
+						AND p.predicted_winner_id = f.id
 				;
 			`,
 			pointsGoodPrediction, fightID, officialWinnerExternalID,
@@ -253,3 +255,42 @@ func syncPredictions() error{
 	return nil
 }
 
+// L'api d'après tests peut laisser des combats annulés pendant certains jours en tant que "STATUS_SCHEDULED"
+// mais aussi peut les retirer après complètement, auquel cas l fonction syncFights() n'aura pas d'effet.
+// D'où le rajout de cette fonction
+func assureCardCoherent(card database.Card){
+
+	fightsRows, err := database.GetCardFights(database.DB, card.ID)
+
+	if err != nil {
+		log.Printf("[sync.makeCardsCoherent] : Erreur dans la récupération de carte %v", err)
+	}else{
+		for fightsRows.Next() {
+			fight, err := database.ScanFight(fightsRows)
+			if err != nil {
+				log.Printf("sync.makeCardsCoherent : Erreur Scan %v", err)
+				continue
+			}
+			// NOTE: Carte terminée && Combat non terminé => combat annulé.
+			//  l'API ne donne pas explicitement un STATUS_CANCELED
+			if !fight.Completed && card.Completed {
+				fight.Status = "STATUS_CANCELED"
+				
+				database.UpsertFight(
+					database.DB, 
+					fight.ExternalID, 
+					card.ID, 
+					fight.Fighter1.ID,
+					fight.Fighter2.ID,
+					fight.Winner,
+					fight.Category,
+					fight.Status,
+					fight.Completed,
+					10, //TODO: faire une logique pour les points à gagner
+					)
+			}
+
+		}
+	}
+
+}
