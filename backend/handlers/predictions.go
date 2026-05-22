@@ -1,7 +1,7 @@
 package handlers
 
 import (
-	"database/sql" // TODO: séparation de tâches : passer que par fantasy/database
+	"database/sql" // TODO: enlève la dépendance à sql (passage par fantasy/database)
 	"encoding/json"
 	"fantasy/database"
 	"log"
@@ -59,21 +59,10 @@ func createOrUpdatePrediction(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	var fighter1ID int
-	var fighter2ID int
-	var fightCompleted bool
-	var cardCompleted bool
+	var fighter1ID, fighter2ID int
+	var fightCompleted, cardCompleted bool
 
-	err = database.DB.QueryRow(`
-		SELECT
-			fights.fighter1_id,
-			fights.fighter2_id,
-			fights.completed,
-			cards.completed
-		FROM fights
-		JOIN cards ON cards.id = fights.card_id
-		WHERE fights.id = $1
-	`, body.FightID).Scan(
+	err = database.GetFightAndCardStatus(database.DB, body.FightID).Scan(
 		&fighter1ID,
 		&fighter2ID,
 		&fightCompleted,
@@ -82,7 +71,6 @@ func createOrUpdatePrediction(w http.ResponseWriter, req *http.Request) {
 
 	// Note : le race qui peut arriver avec le fait que la carte soit terminée juste après cette reqête
 	// est évité parceque on ferme les prédiction avant que la carte soit terminé
-
 	if err != nil {
 		if err == sql.ErrNoRows {
 			writeJsonError(w, http.StatusNotFound, "Combat introuvable")
@@ -104,27 +92,7 @@ func createOrUpdatePrediction(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-
-	// Grâce au UNIQUE (user_id, fight_id), cette requête crée la prédiction
-	// si elle n'existe pas encore, ou met à jour le choix de l'utilisateur sinon.
-	_, err = database.DB.Exec(`
-		INSERT INTO predictions (
-			user_id,
-			fight_id,
-			predicted_winner_id,
-			points_obtained
-		)
-		VALUES ($1, $2, $3, 0)
-		ON CONFLICT (user_id, fight_id)
-		DO UPDATE SET
-			predicted_winner_id = EXCLUDED.predicted_winner_id,
-			points_obtained = 0
-	`,
-	// FIXME: (VALUES ($1, $2, $3, 0)) quand tu modifies la base change le 0 pour un type nullable.
-		userID,
-		body.FightID,
-		body.PredictedWinnerID,
-	)
+	_, err = database.UpsertPrediction(database.DB, userID, body.FightID, body.PredictedWinnerID)
 
 	if err != nil {
 		log.Printf("predictions.createOrUpdatePrediction: erreur upsert prédiction: %v", err)
@@ -135,49 +103,13 @@ func createOrUpdatePrediction(w http.ResponseWriter, req *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
-// Pour toutes les cartes dont l'utilisateur connecté possède des prédictions, retourne ces prédictions
 func getMyPredictions(w http.ResponseWriter, req *http.Request) {
 	userID, ok := getAuthenticatedUserID(w, req)
 	if !ok {
 		return
 	}
 
-	rows, err := database.DB.Query(`
-		SELECT
-			cards.id,
-			cards.title,
-			cards.date::text,
-			cards.status,
-			cards.completed,
-
-			fights.id,
-			COALESCE(fights.category, ''),
-			fights.completed,
-			fights.points_good_prediction,
-
-			fighter1.full_name,
-			fighter2.full_name,
-
-			predictions.predicted_winner_id,
-			predicted_fighter.full_name,
-
-			fights.winner_fighter_id,
-			winner_fighter.full_name,
-
-			predictions.points_obtained
-
-		FROM predictions
-		JOIN fights ON fights.id = predictions.fight_id
-		JOIN cards ON cards.id = fights.card_id
-
-		JOIN fighters fighter1 ON fighter1.id = fights.fighter1_id
-		JOIN fighters fighter2 ON fighter2.id = fights.fighter2_id
-		JOIN fighters predicted_fighter ON predicted_fighter.id = predictions.predicted_winner_id
-		LEFT JOIN fighters winner_fighter ON winner_fighter.id = fights.winner_fighter_id
-
-		WHERE predictions.user_id = $1
-		ORDER BY cards.date DESC, fights.id ASC
-	`, userID)
+	rows, err := database.GetMyPredictions(database.DB, userID)
 
 	if err != nil {
 		log.Printf("predictions.getMyPredictions: erreur query: %v", err)
@@ -232,8 +164,8 @@ func getMyPredictions(w http.ResponseWriter, req *http.Request) {
 
 			&winnerID,
 			&winnerName,
-			// NOTE: points obtained sera toujours à 0, ce n'est pas encore màj
-			&pointsObtained,
+
+			&pointsObtained, // NOTE: points obtained sera toujours à 0, ce n'est pas encore màj
 		)
 
 		if err != nil {
@@ -288,15 +220,15 @@ func getMyPredictions(w http.ResponseWriter, req *http.Request) {
 		card.TotalPredictions++
 
 		card.Fights = append(card.Fights, MyPredictionFightResponse{
-			FightID:         fightID,
-			Category:        category,
-			Fighter1:         fighter1Name,
-			Fighter2:         fighter2Name,
-			PredictedWinner: predictedWinnerName,
-			OfficialWinner:  officialWinner,
-			PointsObtained:  pointsObtainedResp,
+			FightID:              fightID,
+			Category:             category,
+			Fighter1:             fighter1Name,
+			Fighter2:             fighter2Name,
+			PredictedWinner:      predictedWinnerName,
+			OfficialWinner:       officialWinner,
+			PointsObtained:       pointsObtainedResp,
 			PointsGoodPrediction: pointsGoodPrediction,
-			Status:          fightStatus,
+			Status:               fightStatus,
 		})
 	}
 
@@ -306,7 +238,6 @@ func getMyPredictions(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	// On garde l'ordre SQL, car une map Go ne garantit pas l'ordre
 	response := []MyPredictionCardResponse{}
 	for _, cardID := range cardsOrder {
 		response = append(response, *cardsByID[cardID])
@@ -315,7 +246,6 @@ func getMyPredictions(w http.ResponseWriter, req *http.Request) {
 	writeJsonResponse(w, http.StatusOK, response)
 }
 
-// Retourne les prédictions de l'utilisateur connecté pour une carte précise.
 func GetCardPredictionsMe(w http.ResponseWriter, req *http.Request, cardID int) {
 	if req.Method != http.MethodGet {
 		writeJsonError(w, http.StatusMethodNotAllowed, "Méthode non autorisée")
@@ -327,18 +257,7 @@ func GetCardPredictionsMe(w http.ResponseWriter, req *http.Request, cardID int) 
 		return
 	}
 
-	rows, err := database.DB.Query(`
-		SELECT
-			predictions.id,
-			predictions.fight_id,
-			predictions.predicted_winner_id,
-			predictions.points_obtained
-		FROM predictions
-		JOIN fights ON fights.id = predictions.fight_id
-		WHERE predictions.user_id = $1
-		  AND fights.card_id = $2
-		ORDER BY fights.id ASC
-	`, userID, cardID)
+	rows, err := database.GetCardPredictionsMe(database.DB, userID, cardID)
 
 	if err != nil {
 		log.Printf("predictions.GetCardPredictionsMe: erreur query: %v", err)

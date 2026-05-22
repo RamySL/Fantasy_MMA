@@ -13,8 +13,9 @@ func main(){
 
 	go func ()  {
 		espn.SyncTicker(21, time.Hour * 1)
+		//espn.Sync()
 	}()
-	espn.Sync()
+	
 
 	server.Start()
 }

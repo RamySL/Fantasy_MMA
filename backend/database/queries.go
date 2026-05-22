@@ -160,8 +160,7 @@ func UpsertFight(
 }
 
 
-/** 
- Cards
+/** Cards
 */
 
 func GetCards(queryMaker QueryMaker) (*sql.Rows, error) {
@@ -237,12 +236,99 @@ Predictions
 */
 
 func DelPredictionByFightID(qM QueryMaker, fightID int) {
-
 	qM.Exec(`
 		DELETE FROM predictions
 		WHERE predictions.fight_id = $1
 	`,
 	fightID)
+}
+
+// Retourne fights.fighter1_id,fights.fighter2_id,fights.completed,cards.completed
+func GetFightAndCardStatus(qM QueryMaker, fightID int) (*sql.Row) {
+	return qM.QueryRow(`
+		SELECT
+			fights.fighter1_id,
+			fights.fighter2_id,
+			fights.completed,
+			cards.completed
+		FROM fights
+		JOIN cards ON cards.id = fights.card_id
+		WHERE fights.id = $1
+	`, fightID)
+}
+
+// Crée ou met à jour une prédiction
+func UpsertPrediction(qM QueryMaker, userID int, fightID int, predictedWinnerID int) (sql.Result, error) {
+	// FIXME: (VALUES ($1, $2, $3, 0)) quand tu modifies la base change le 0 pour un type nullable.
+	return qM.Exec(`
+		INSERT INTO predictions (
+			user_id,
+			fight_id,
+			predicted_winner_id,
+			points_obtained
+		)
+		VALUES ($1, $2, $3, 0)
+		ON CONFLICT (user_id, fight_id)
+		DO UPDATE SET
+			predicted_winner_id = EXCLUDED.predicted_winner_id,
+			points_obtained = 0
+	`, userID, fightID, predictedWinnerID)
+}
+
+// Récupère toutes les prédictions d'un utilisateur avec les détails associés
+func GetMyPredictions(qM QueryMaker, userID int) (*sql.Rows, error) {
+	return qM.Query(`
+		SELECT
+			cards.id,
+			cards.title,
+			cards.date::text,
+			cards.status,
+			cards.completed,
+
+			fights.id,
+			COALESCE(fights.category, ''),
+			fights.completed,
+			fights.points_good_prediction,
+
+			fighter1.full_name,
+			fighter2.full_name,
+
+			predictions.predicted_winner_id,
+			predicted_fighter.full_name,
+
+			fights.winner_fighter_id,
+			winner_fighter.full_name,
+
+			predictions.points_obtained
+
+		FROM predictions
+		JOIN fights ON fights.id = predictions.fight_id
+		JOIN cards ON cards.id = fights.card_id
+
+		JOIN fighters fighter1 ON fighter1.id = fights.fighter1_id
+		JOIN fighters fighter2 ON fighter2.id = fights.fighter2_id
+		JOIN fighters predicted_fighter ON predicted_fighter.id = predictions.predicted_winner_id
+		LEFT JOIN fighters winner_fighter ON winner_fighter.id = fights.winner_fighter_id
+
+		WHERE predictions.user_id = $1
+		ORDER BY cards.date DESC, fights.id ASC
+	`, userID)
+}
+
+// Récupère les prédictions d'un utilisateur pour une carte spécifique
+func GetCardPredictionsMe(qM QueryMaker, userID int, cardID int) (*sql.Rows, error) {
+	return qM.Query(`
+		SELECT
+			predictions.id,
+			predictions.fight_id,
+			predictions.predicted_winner_id,
+			predictions.points_obtained
+		FROM predictions
+		JOIN fights ON fights.id = predictions.fight_id
+		WHERE predictions.user_id = $1
+		  AND fights.card_id = $2
+		ORDER BY fights.id ASC
+	`, userID, cardID)
 }
 
 /**
@@ -307,4 +393,37 @@ func DeleteSessionByTokenH(qM QueryMaker, tokenHash string)(sql.Result, error){
 		DELETE FROM sessions
 		WHERE token_hash = $1
 	`, tokenHash)
+}
+// FIXME: jamais utilisé
+func DeleteExpiredSessions(qM QueryMaker)(sql.Result, error) {
+	return qM.Exec(`
+		DELETE FROM sessions
+		WHERE expires_at <= NOW()
+	`)
+}
+
+/**
+Ranking
+*/
+
+// Récupère le classement global des utilisateurs.
+// Le tri s'effectue sur le total des points obtenus, puis sur le nombre de bonnes prédictions, 
+// et enfin sur le nombre total de prédictions effectuées.
+func GetGlobalRanking(qM QueryMaker) (*sql.Rows, error) {
+	return qM.Query(`
+		SELECT
+			users.pseudo,
+			COALESCE(SUM(predictions.points_obtained), 0)::int AS total_points,
+			COALESCE(SUM(
+				CASE
+					WHEN predictions.points_obtained > 0 THEN 1
+					ELSE 0
+				END
+			), 0)::int AS good_predictions,
+			COUNT(predictions.id)::int AS total_predictions
+		FROM users
+		LEFT JOIN predictions ON predictions.user_id = users.id
+		GROUP BY users.id, users.pseudo
+		ORDER BY total_points DESC, good_predictions DESC, total_predictions DESC, users.pseudo ASC
+	`)
 }

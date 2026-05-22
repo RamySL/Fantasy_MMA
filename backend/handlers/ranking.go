@@ -7,28 +7,14 @@ import (
 )
 
 // Retourne le classement global des utilisateurs.
-// Le score est basé sur predictions.points_obtained
+// Le score est basé sur le totale des points puis sur le nombre de bonne prédiction.
 func Ranking(w http.ResponseWriter, req *http.Request) {
 	if req.Method != http.MethodGet {
 		writeJsonError(w, http.StatusMethodNotAllowed, "Méthode non autorisée")
 		return
 	}
-	rows, err := database.DB.Query(`
-		SELECT
-			users.pseudo,
-			COALESCE(SUM(predictions.points_obtained), 0)::int AS total_points,
-			COALESCE(SUM(
-				CASE
-					WHEN predictions.points_obtained > 0 THEN 1
-					ELSE 0
-				END
-			), 0)::int AS good_predictions,
-			COUNT(predictions.id)::int AS total_predictions
-		FROM users
-		LEFT JOIN predictions ON predictions.user_id = users.id
-		GROUP BY users.id, users.pseudo
-		ORDER BY total_points DESC, good_predictions DESC, total_predictions DESC, users.pseudo ASC
-	`)
+
+	rows, err := database.GetGlobalRanking(database.DB)
 
 	if err != nil {
 		log.Printf("ranking.Ranking: erreur query: %v", err)

@@ -34,6 +34,7 @@ func generateSessionToken() (string) {
 	// Très important pour avoir des chaines correct à utiliser pour les url, cookies etc
 	return base64.RawURLEncoding.EncodeToString(b)
 }
+
 func hashSessionToken(token string) string {
 	sum := sha256.Sum256([]byte(token))
 	return hex.EncodeToString(sum[:])
@@ -47,7 +48,7 @@ func createSession(userID int) (string, error) {
 	tokenHash := hashSessionToken(token)
 	expiresAt := time.Now().Add(7 * 24 * time.Hour)
 
-	_, err :=  database.InsertSession(database.DB, userID, tokenHash, expiresAt)
+	_, err := database.InsertSession(database.DB, userID, tokenHash, expiresAt)
 
 	if err != nil {
 		return "", err
@@ -60,7 +61,7 @@ func setSessionCookie(w http.ResponseWriter, token string) {
 	http.SetCookie(w, &http.Cookie{
 		Name:     "session_token",
 		Value:    token,
-		Path: "/", // Le cookie sera envoyé pour toutes les routes proposées
+		Path:     "/", // Le cookie sera envoyé pour toutes les routes proposées
 		HttpOnly: true,
 		SameSite: http.SameSiteLaxMode,
 		MaxAge:   7 * 24 * 60 * 60,
@@ -69,7 +70,6 @@ func setSessionCookie(w http.ResponseWriter, token string) {
 
 func findUserIDBySessionToken(token string) (int, error) {
 	tokenHash := hashSessionToken(token)
-
 	var userID int
 
 	err := database.GetValidSessionByTokenH(database.DB, tokenHash).Scan(&userID)
@@ -84,22 +84,13 @@ func findUserIDBySessionToken(token string) (int, error) {
 // Envoi un cookie qui va faire supprimer le cookie courant coté client.
 func clearSessionCookie(w http.ResponseWriter) {
 	http.SetCookie(w, &http.Cookie{
-		Name:     "session_token",
-		Value:    "",
-		Path: "/",
+		Name:     	"session_token",
+		Value:    	"",
+		Path: 		"/",
 		HttpOnly: true,
 		SameSite: http.SameSiteLaxMode,
 		MaxAge:   -1,
 	})
-}
-// FIXME: pas utilisé encore
-func deleteExpiredSessions() error {
-	_, err := database.DB.Exec(`
-		DELETE FROM sessions
-		WHERE expires_at <= NOW()
-	`)
-
-	return err
 }
 
 func getAuthenticatedUserID(w http.ResponseWriter, req *http.Request) (int, bool) {
@@ -117,5 +108,3 @@ func getAuthenticatedUserID(w http.ResponseWriter, req *http.Request) (int, bool
 
 	return userID, true
 }
-
-
