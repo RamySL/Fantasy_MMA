@@ -1,5 +1,6 @@
 import Badge from "./Badge.jsx";
 import { getFightWinnerName, getWinnerId } from "../utils/fights.js";
+import unknownFighterImg from "../assets/unknown_fighter.png";
 
 function FighterButton({ fighter, isSelected, isWinner, disabled, onClick }) {
   const {
@@ -31,9 +32,11 @@ function FighterButton({ fighter, isSelected, isWinner, disabled, onClick }) {
             className="h-20 w-20 rounded-full object-cover border border-slate-200"
           />
         ) : (
-          <div className="h-14 w-14 rounded-full bg-slate-200 flex items-center justify-center text-slate-500 text-xs">
-            Pas d'image
-          </div>
+          <img
+            src={unknownFighterImg}
+            alt={"unknown fighter"}
+            className="h-20 w-20 rounded-full object-cover border border-slate-200"
+          />
         )}
 
         <div className="flex-1">

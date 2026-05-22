@@ -75,10 +75,10 @@ export default function MyPredictionsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <p className="text-sm font-semibold uppercase tracking-[0.25em] text-slate-500">Mon espace</p>
-        <h1 className="mt-2 text-3xl font-black tracking-tight text-slate-950">Mes predictions</h1>
+        <p className="text-sm font-semibold uppercase tracking-[0.25em] text-slate-500">Mon éspace</p>
+        <h1 className="mt-2 text-3xl font-black tracking-tight text-slate-950">Mes prédictions</h1>
         <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">
-          Recapitulatif personnel de tes choix, points obtenus et predictions encore en attente.
+          Récapitulatif personnel de tes choix, points obtenus et prédictions encore en attente.
         </p>
       </div>
 
@@ -87,11 +87,11 @@ export default function MyPredictionsPage() {
       <section className="grid gap-4 sm:grid-cols-3">
         <StatCard label="Points" value={totals.points} helper={`${totals.possiblePoints} pts possibles`} />
         <StatCard label="Bons pronos" value={`${totals.good}/${totals.total}`} helper="Toutes cartes confondues" />
-        <StatCard label="Cartes jouees" value={predictionCards.length} helper="Depuis tes predictions sauvegardees" />
+        <StatCard label="Cartes jouées" value={predictionCards.length} helper="Depuis tes prédictions sauvegardées" />
       </section>
 
       {isLoading ? (
-        <LoadingState label="Chargement des predictions..." />
+        <LoadingState label="Chargement des prédictions..." />
       ) : predictionCards.length > 0 ? (
         <div className="space-y-5">
           {predictionCards.map((card) => (
@@ -112,8 +112,8 @@ export default function MyPredictionsPage() {
               <div className="mt-5 overflow-hidden rounded-2xl border border-slate-200">
                 <div className="hidden grid-cols-[1.1fr_1fr_1fr_auto] gap-4 bg-slate-100 px-4 py-3 text-xs font-bold uppercase tracking-wide text-slate-500 md:grid">
                   <span>Combat</span>
-                  <span>Prediction</span>
-                  <span>Resultat</span>
+                  <span>Prédiction</span>
+                  <span>Résultat</span>
                   <span>Points</span>
                 </div>
                 {card.fights.map((fight) => (
@@ -135,7 +135,7 @@ export default function MyPredictionsPage() {
           ))}
         </div>
       ) : (
-        <EmptyState title="Aucune prediction" message="Tes predictions sauvegardees apparaitront ici une fois le backend branche." actionLabel="Voir les cartes" actionTo="/cards" />
+        <EmptyState title="Aucune prédiction" message="Tes prédictions sauvegardées apparaitront ici." actionLabel="Voir les cartes" actionTo="/cards" />
       )}
     </div>
   );

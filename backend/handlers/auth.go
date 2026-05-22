@@ -62,16 +62,10 @@ func registerUser(w http.ResponseWriter, req *http.Request){
 	}
 	var userResp AuthUserResponse 
 	// insertion dans la base
-	err = database.DB.QueryRow(`
-		INSERT INTO users (pseudo, email, password_hash)
-		VALUES ($1, $2, $3)
-		RETURNING id, pseudo, email
-	`,
-	body.Pseudo,
-	body.Email,
-	string(pwdHash),
-	).Scan(&userResp.ID, &userResp.Pseudo, &userResp.Email)
+	err = database.InsertUser(database.DB, body.Pseudo, body.Email, string(pwdHash)).
+			Scan(&userResp.ID, &userResp.Pseudo, &userResp.Email)
 
+	// TODO : délègue cette gestion à database
 	if err != nil {
 		pqError := pq.As(err, pqerror.UniqueViolation)
 
@@ -115,16 +109,7 @@ func logInUser(w http.ResponseWriter, req *http.Request) {
 	var user AuthUserResponse
 	var passwordHash string
 
-	err = database.DB.QueryRow(`
-		SELECT id, pseudo, email, password_hash
-		FROM users
-		WHERE email = $1
-	`, body.Email).Scan(
-		&user.ID,
-		&user.Pseudo,
-		&user.Email,
-		&passwordHash,
-	)
+	err = database.GetUserByEmail(database.DB, body.Email).Scan(&user.ID, &user.Pseudo, &user.Email, &passwordHash)
 
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -157,7 +142,8 @@ func logOutUser(w http.ResponseWriter, req *http.Request) {
 	cookie, err := req.Cookie("session_token")
 
 	if err == nil {
-		err = deleteSession(cookie.Value)
+		tokenHash := hashSessionToken(cookie.Value)
+		_, err = database.DeleteSessionByTokenH(database.DB, tokenHash)
 		if err != nil {
 			writeJsonError(w, http.StatusInternalServerError, "Erreur suppression session")
 			return
@@ -190,15 +176,7 @@ func Me(w http.ResponseWriter, req *http.Request) {
 
 	var user AuthUserResponse
 
-	err = database.DB.QueryRow(`
-		SELECT id, pseudo, email
-		FROM users
-		WHERE id = $1
-	`, userID).Scan(
-		&user.ID,
-		&user.Pseudo,
-		&user.Email,
-	)
+	err = database.GetUserByID(database.DB, userID).Scan(&user.ID, &user.Pseudo, &user.Email)
 
 	if err != nil {
 		writeJsonError(w, http.StatusInternalServerError, "Erreur lecture utilisateur")

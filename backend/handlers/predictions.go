@@ -1,7 +1,7 @@
 package handlers
 
 import (
-	"database/sql"
+	"database/sql" // TODO: séparation de tâches : passer que par fantasy/database
 	"encoding/json"
 	"fantasy/database"
 	"log"
@@ -79,6 +79,9 @@ func createOrUpdatePrediction(w http.ResponseWriter, req *http.Request) {
 		&fightCompleted,
 		&cardCompleted,
 	)
+
+	// Note : le race qui peut arriver avec le fait que la carte soit terminée juste après cette reqête
+	// est évité parceque on ferme les prédiction avant que la carte soit terminé
 
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -229,7 +232,7 @@ func getMyPredictions(w http.ResponseWriter, req *http.Request) {
 
 			&winnerID,
 			&winnerName,
-			// FIXME: points obtained sera toujours à 0, ce n'est pas encore màj
+			// NOTE: points obtained sera toujours à 0, ce n'est pas encore màj
 			&pointsObtained,
 		)
 

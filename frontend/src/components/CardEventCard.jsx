@@ -24,7 +24,7 @@ export default function CardEventCard({ card }) {
       </div>
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <p className="text-xs text-slate-500">Predictions {isCompleted ? "fermees" : "ouvertes selon statut"}</p>
+        <p className="text-xs text-slate-500">Prédictions {isCompleted ? "fermées" : "ouvertes"}</p>
         <Link to={`/cards/${card.id}`} className="btn-secondary">
           Voir la carte
         </Link>

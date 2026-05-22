@@ -62,10 +62,10 @@ export default function HomePage() {
           <div>
             <p className="text-sm font-semibold uppercase tracking-[0.3em] text-slate-300">Fantasy MMA</p>
             <h1 className="mt-4 max-w-3xl text-4xl font-black tracking-tight sm:text-5xl">
-              Fais tes predictions, suis tes points, grimpe au classement.
+              Fais tes prédictions, suis tes points, grimpe au classement.
             </h1>
             <p className="mt-5 max-w-2xl text-base leading-7 text-slate-300">
-              Une interface simple pour choisir les gagnants de chaque combat et comparer tes resultats avec les autres participants.
+              Une interface simple pour choisir les gagnants de chaque combat et comparer tes résultats avec les autres participants.
             </p>
           </div>
 
@@ -95,7 +95,7 @@ export default function HomePage() {
       <section className="grid gap-4 sm:grid-cols-3">
         <StatCard label="Cartes totales" value={dashboard.totalCount} />
         <StatCard label="Cartes à venir" value={dashboard.upcomingCount} helper="Predictions ouvertes selon statut" />
-        <StatCard label="Cartes terminées" value={dashboard.completedCount} helper="Resultats disponibles" />
+        <StatCard label="Cartes terminées" value={dashboard.completedCount} helper="Résultats disponibles" />
       </section>
 
       {error && <ErrorMessage message={error} />}
@@ -116,7 +116,7 @@ export default function HomePage() {
         ) : dashboard.nextCard ? (
           <CardEventCard card={dashboard.nextCard} />
         ) : (
-          <EmptyState title="Aucune carte a venir" message="Les prochaines cartes apparaitront ici quand le backend les retournera." actionLabel="Voir toutes les cartes" actionTo="/cards" />
+          <EmptyState title="Aucune carte à venir" message="Les prochaines cartes apparaitront ici." actionLabel="Voir toutes les cartes" actionTo="/cards" />
         )}
       </section>
     </div>

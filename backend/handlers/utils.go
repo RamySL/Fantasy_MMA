@@ -47,10 +47,7 @@ func createSession(userID int) (string, error) {
 	tokenHash := hashSessionToken(token)
 	expiresAt := time.Now().Add(7 * 24 * time.Hour)
 
-	_, err := database.DB.Exec(`
-		INSERT INTO sessions (user_id, token_hash, expires_at)
-		VALUES ($1, $2, $3)
-	`, userID, tokenHash, expiresAt)
+	_, err :=  database.InsertSession(database.DB, userID, tokenHash, expiresAt)
 
 	if err != nil {
 		return "", err
@@ -75,12 +72,7 @@ func findUserIDBySessionToken(token string) (int, error) {
 
 	var userID int
 
-	err := database.DB.QueryRow(`
-		SELECT user_id
-		FROM sessions
-		WHERE token_hash = $1
-		  AND expires_at > NOW()
-	`, tokenHash).Scan(&userID)
+	err := database.GetValidSessionByTokenH(database.DB, tokenHash).Scan(&userID)
 
 	if err != nil {
 		return -1, err
@@ -100,18 +92,7 @@ func clearSessionCookie(w http.ResponseWriter) {
 		MaxAge:   -1,
 	})
 }
-
-func deleteSession(token string) error {
-	tokenHash := hashSessionToken(token)
-
-	_, err := database.DB.Exec(`
-		DELETE FROM sessions
-		WHERE token_hash = $1
-	`, tokenHash)
-
-	return err
-}
-
+// FIXME: pas utilisé encore
 func deleteExpiredSessions() error {
 	_, err := database.DB.Exec(`
 		DELETE FROM sessions

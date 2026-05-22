@@ -2,9 +2,10 @@ package database
 
 import (
 	"database/sql"
+	"time"
 )
 
-/* 
+/*
 Des fonctions qui font des insertions dans la base si les données n'existaient
 pas avant, sinon mettent à jour la ligne sans insertion de nouvelle entrée dans la table.
 */
@@ -173,7 +174,7 @@ func GetCards(queryMaker QueryMaker) (*sql.Rows, error) {
 	`)
 }
 
-func GetCardByID (queryMaker QueryMaker, id int) (*sql.Row) {
+func GetCardByID(queryMaker QueryMaker, id int) (*sql.Row) {
 	return queryMaker.QueryRow(`
 		SELECT id, external_id, title, date::text, status, completed,
 		       COALESCE(venue_name, ''), COALESCE(city, ''), 
@@ -185,7 +186,7 @@ func GetCardByID (queryMaker QueryMaker, id int) (*sql.Row) {
 	)
 }
 
-func GetCardFights (queryMaker QueryMaker, id int) (*sql.Rows, error){
+func GetCardFights(queryMaker QueryMaker, id int) (*sql.Rows, error){
 	return queryMaker.Query(`
 		SELECT 
 		    fights.id,
@@ -222,7 +223,7 @@ func GetCardFights (queryMaker QueryMaker, id int) (*sql.Rows, error){
 	)
 }
 
-func GetNextCard (qM QueryMaker) (*sql.Row) {
+func GetNextCard(qM QueryMaker) (*sql.Row) {
 	return qM.QueryRow(`
 		SELECT id, external_id, title, date::text, status, completed,
 		       COALESCE(venue_name, ''), COALESCE(city, ''), 
@@ -235,11 +236,75 @@ func GetNextCard (qM QueryMaker) (*sql.Row) {
 Predictions
 */
 
-func DelPredictionByFightID (qM QueryMaker, fightID int) {
+func DelPredictionByFightID(qM QueryMaker, fightID int) {
 
 	qM.Exec(`
 		DELETE FROM predictions
 		WHERE predictions.fight_id = $1
 	`,
 	fightID)
+}
+
+/**
+Auth
+*/
+
+func InsertUser(qM QueryMaker, pseudo string, email string, pwd string)(*sql.Row){
+	return qM.QueryRow(`
+		INSERT INTO users (pseudo, email, password_hash)
+		VALUES ($1, $2, $3)
+		RETURNING id, pseudo, email
+	`,
+	pseudo,
+	email,
+	pwd,
+	)
+}
+
+func GetUserByEmail(qM QueryMaker, email string)(*sql.Row){
+	return qM.QueryRow(`
+		SELECT id, pseudo, email, password_hash
+		FROM users
+		WHERE email = $1
+	`, 
+	email)
+}
+
+func GetUserByID(qM QueryMaker, id int)(*sql.Row){
+	return qM.QueryRow(`
+		SELECT id, pseudo, email
+		FROM users
+		WHERE id = $1
+	`, id)
+}
+
+func InsertSession(qM QueryMaker, userID int, tokenHash string, expiresAt time.Time)(sql.Result, error){
+	return qM.Exec(`
+		INSERT INTO sessions (user_id, token_hash, expires_at)
+		VALUES ($1, $2, $3)
+	`, userID, tokenHash, expiresAt)
+}
+
+func GetSessionByTokenH(qM QueryMaker, tokenHash string)(*sql.Row){
+	return qM.QueryRow(`
+		SELECT user_id
+		FROM sessions
+		WHERE token_hash = $1
+	`, tokenHash)
+}
+
+func GetValidSessionByTokenH(qM QueryMaker, tokenHash string)(*sql.Row){
+	return qM.QueryRow(`
+		SELECT user_id
+		FROM sessions
+		WHERE token_hash = $1
+		  AND expires_at > NOW()
+	`, tokenHash)
+}
+
+func DeleteSessionByTokenH(qM QueryMaker, tokenHash string)(sql.Result, error){
+	return qM.Exec(`
+		DELETE FROM sessions
+		WHERE token_hash = $1
+	`, tokenHash)
 }

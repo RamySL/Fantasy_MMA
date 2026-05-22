@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"fantasy/database"
+	"database/sql"
 	"log"
 	"net/http"
 	"strconv"
@@ -52,6 +53,7 @@ func GetCardsRoutes(w http.ResponseWriter, req *http.Request) {
 	id, err := strconv.Atoi(parts[1])
 	if err != nil || id < 0 {
 		writeJsonError(w, http.StatusBadRequest, "ID invalide")
+		return
 	}
 	// cards/{id}
 	if len(parts) == 2 {
@@ -75,20 +77,22 @@ func GetCardsRoutes(w http.ResponseWriter, req *http.Request) {
 }
 
 func getCardByID(w http.ResponseWriter, req *http.Request, id int) {
-
 	row := database.GetCardByID(database.DB, id)
 
-	var card database.Card
 	card, err := database.ScanCard(row)
-
 	if err != nil {
+		// TODO: S.O.C normalement dans database
+		if err == sql.ErrNoRows {
+			writeJsonError(w, http.StatusNotFound, "Carte introuvable")
+			return
+		}
+
 		log.Printf("cards.getCardByID : Erreur scan card %v", err)
 		writeJsonError(w, http.StatusInternalServerError, "Erreur serveur interne")
 		return
 	}
 
 	writeJsonResponse(w, http.StatusOK, card)
-
 }
 
 func getCardFights(w http.ResponseWriter, req *http.Request, id int){
