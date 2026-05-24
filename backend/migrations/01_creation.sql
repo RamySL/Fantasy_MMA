@@ -44,7 +44,7 @@ CREATE TABLE predictions (
     user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     fight_id INTEGER NOT NULL REFERENCES fights(id) ON DELETE CASCADE,
     predicted_winner_id INTEGER NOT NULL REFERENCES fighters(id),
-    points_obtained INTEGER NOT NULL, --FIXME: si le combat n'est pas terminé alors null semble approprié
+    points_obtained INTEGER NOT NULL, --TODO: si le combat n'est pas terminé alors null semble approprié
     UNIQUE (user_id, fight_id) -- Une prédiction par user
 );
 

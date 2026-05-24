@@ -280,7 +280,7 @@ func GetFightAndCardStatus(qM QueryMaker, fightID int) (*sql.Row) {
 
 // Crée ou met à jour une prédiction
 func UpsertPrediction(qM QueryMaker, userID int, fightID int, predictedWinnerID int) (sql.Result, error) {
-	// FIXME: (VALUES ($1, $2, $3, 0)) quand tu modifies la base change le 0 pour un type nullable.
+	// TODO: (VALUES ($1, $2, $3, 0)) quand tu modifies la base change le 0 pour un type nullable.
 	return qM.Exec(`
 		INSERT INTO predictions (
 			user_id,
@@ -431,7 +431,7 @@ func DeleteSessionByTokenH(qM QueryMaker, tokenHash string)(sql.Result, error){
 		WHERE token_hash = $1
 	`, tokenHash)
 }
-// FIXME: jamais utilisé
+
 func DeleteExpiredSessions(qM QueryMaker)(sql.Result, error) {
 	return qM.Exec(`
 		DELETE FROM sessions

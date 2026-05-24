@@ -22,18 +22,19 @@ func SyncTicker(lunchHour int, period time.Duration) {
 		lunchHourDate = lunchHourDate.Add(24 * time.Hour)
 	}
 	sleepDuration := time.Until(lunchHourDate)
-	log.Printf("En attente de %v. Prochaine synchro prévue à : %v\n", sleepDuration, sleepDuration)
+
+	log.Printf("Attente de %v avant prochaine synchro de la base. Prochaine synchro prévue à : %v\n", sleepDuration, lunchHourDate)
 	time.Sleep(sleepDuration)
  
 	// L'heure voulue est atteinte
 	log.Println("Début de la première synchronisation...") 
-	if err := Sync(); err != nil { 
+	if err := sync(); err != nil { 
 		log.Printf("[SyncTicker Erreur] : %v\n", err)
 	}
 	t := time.NewTicker(period)
 	for range t.C {
 		log.Println("Début de la synchronisation périodique...")
-		if err := Sync(); err != nil {
+		if err := sync(); err != nil {
 			log.Printf("[SyncTicker Erreur] : %v\n", err)
 		}
 	}
@@ -42,7 +43,7 @@ func SyncTicker(lunchHour int, period time.Duration) {
 // fonction principale d'actualisation des tables de base de données.
 // Fetch les prochaines cartes à travers l'api et insert dans la base : les cartes, les combats, les combattant.
 // et actualise les résultat de prédictions
-func Sync() error {
+func sync() error {
 	// Note: important de récupérer la prochaine avant d'actualiser la BDD.
 	// Sinon le 'STATUS_SCHEDUDLED' sera écrasé
 	nextCard, err := database.ScanCard(database.GetNextCard(database.DB)) 
@@ -198,7 +199,6 @@ func syncFights(card database.Card, competitions []ESPNCompetition) error {
 }
 
 // Pour la prochaine carte qui a lieu, màj la table 'predictions' si la carte est terminée.
-//TODO: à simplifier en stockant la prochaine carte ?
 //@precondition: BD traité par rapport aux combats annulés
 func syncPredictions(nextCard database.Card) error{
 
