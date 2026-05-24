@@ -3,8 +3,9 @@ package main
 import (
 	"fantasy/database"
 	"fantasy/espn"
-	"time"
 	"fantasy/server"
+	"log"
+	"time"
 )
 
 func main(){
@@ -13,7 +14,10 @@ func main(){
 
 	// Remplissage initale de la base
 	go func(){
-		espn.Sync(true)
+		err := espn.Sync(true)
+		if err != nil{
+			log.Printf("[main] : erreur synchronisation init : %v ", err)
+		}
 	}()
 	
 	//Actualisation de la base de données avec les résultats 
