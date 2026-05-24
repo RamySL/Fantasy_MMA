@@ -1,12 +1,14 @@
 package handlers
 
 import (
-	"fantasy/database"
 	"database/sql"
+	"fantasy/database"
+	"fantasy/espn"
 	"log"
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 )
 
 func GetCards(w http.ResponseWriter, req *http.Request) {
@@ -57,13 +59,13 @@ func GetCardsRoutes(w http.ResponseWriter, req *http.Request) {
 	}
 	// cards/{id}
 	if len(parts) == 2 {
-		getCardByID(w, req, id)
+		getCardByID(w, id)
 		return
 	}
 
 	// cards/{id}/fights
 	if len(parts) == 3 && parts[2] == "fights" {
-		getCardFights(w, req, id)
+		getCardFights(w, id)
 		return
 	}
 
@@ -76,7 +78,7 @@ func GetCardsRoutes(w http.ResponseWriter, req *http.Request) {
 	http.NotFound(w, req)
 }
 
-func getCardByID(w http.ResponseWriter, req *http.Request, id int) {
+func getCardByID(w http.ResponseWriter, id int) {
 	row := database.GetCardByID(database.DB, id)
 
 	card, err := database.ScanCard(row)
@@ -92,10 +94,18 @@ func getCardByID(w http.ResponseWriter, req *http.Request, id int) {
 		return
 	}
 
-	writeJsonResponse(w, http.StatusOK, card)
+	parsedCardDate, _ :=  time.Parse(espn.DateLayout, espn.GetDayDelta(card.Date, 0))
+	deadline := parsedCardDate.AddDate(0, 0, -closePredictionsDeadline)
+	
+	var cardResp CardResponse;
+	cardResp.Card = card
+	cardResp.PredictionsClosed = time.Now().After(deadline)
+	cardResp.EndPredictionsDate = deadline
+
+	writeJsonResponse(w, http.StatusOK, cardResp)
 }
 
-func getCardFights(w http.ResponseWriter, req *http.Request, id int){
+func getCardFights(w http.ResponseWriter, id int){
 
 	rows, err := database.GetCardFights(database.DB, id)
 

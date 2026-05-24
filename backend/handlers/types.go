@@ -1,8 +1,19 @@
 package handlers
 
+import (
+	"fantasy/database"
+	"time"
+)
+
 /* TODO : Pour les autres réponses comme pour getCards il y'a une fonction identité implicite
 entre database.types et handlers.types
 */
+
+type CardResponse struct {
+	database.Card
+	PredictionsClosed bool `json:"predictions_closed"`
+	EndPredictionsDate time.Time `json:"end_predictions_date"`
+}
 
 /* AUTH */
 
@@ -68,3 +79,6 @@ type MyPredictionFightResponse struct {
 	PointsGoodPrediction  int     `json:"points_available"`
 	Status           string  `json:"status"`
 }
+
+// Nombre de jours avant les combats pour fermer les prédictions
+const closePredictionsDeadline = 1

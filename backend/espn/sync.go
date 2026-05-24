@@ -58,7 +58,7 @@ func Sync() error {
 		return fmt.Errorf("Sync: aucune league trouvée dans la réponse ESPN")
 	}
 
-    parsedNextDate, err := time.Parse("20060102", getDayDelta(nextCard.Date, 0))
+    parsedNextDate, err := time.Parse(DateLayout, GetDayDelta(nextCard.Date, 0))
     if err != nil {
         fmt.Println("[sync.sync] next card parse:", err)
         return err
@@ -69,7 +69,7 @@ func Sync() error {
 	for _, calendar := range calendars {
 
 		eventDate := calendar.StartDate
-		parsedDate, err := time.Parse("20060102", getDayDelta(eventDate, 0))
+		parsedDate, err := time.Parse(DateLayout, GetDayDelta(eventDate, 0))
 		if err != nil {
 			fmt.Println("[sync.sync] parse:", err)
 			continue

@@ -1,5 +1,7 @@
 package espn
 
+const DateLayout = "20060102"
+
 /*
 Ce fichier contient les types qui vont stocker les données retournées par l'API. 
 */

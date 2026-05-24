@@ -4,9 +4,11 @@ import (
 	"database/sql" // TODO: enlève la dépendance à sql (passage par fantasy/database)
 	"encoding/json"
 	"fantasy/database"
+	"fantasy/espn"
 	"log"
 	"net/http"
 	"strings"
+	"time"
 )
 
 func Predictions(w http.ResponseWriter, req *http.Request) {
@@ -61,13 +63,16 @@ func createOrUpdatePrediction(w http.ResponseWriter, req *http.Request) {
 
 	var fighter1ID, fighter2ID int
 	var fightCompleted, cardCompleted bool
+	var cardDate string;
 
 	err = database.GetFightAndCardStatus(database.DB, body.FightID).Scan(
 		&fighter1ID,
 		&fighter2ID,
 		&fightCompleted,
 		&cardCompleted,
+		&cardDate,
 	)
+	parsedCardDate, _ := time.Parse(espn.DateLayout, espn.GetDayDelta(cardDate, 0))
 
 	// Note : le race qui peut arriver avec le fait que la carte soit terminée juste après cette reqête
 	// est évité parceque on ferme les prédiction avant que la carte soit terminé
@@ -79,6 +84,12 @@ func createOrUpdatePrediction(w http.ResponseWriter, req *http.Request) {
 
 		log.Printf("predictions.createOrUpdatePrediction: erreur lecture combat: %v", err)
 		writeJsonError(w, http.StatusInternalServerError, "Erreur serveur interne")
+		return
+	}
+
+	// Les prédictions se ferment un jour avant les combats
+	if time.Now().After(parsedCardDate.AddDate(0, 0, -closePredictionsDeadline)){
+		writeJsonError(w, http.StatusConflict, "Prédictions fermées")
 		return
 	}
 

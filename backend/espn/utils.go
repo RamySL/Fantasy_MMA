@@ -19,33 +19,39 @@ func upsertFighter (tx *sql.Tx, athlete ESPNAthlete, records []ESPNRecord) (int,
 	)
 }
 
-func getDayDelta(d string, delta int) (string){
+// TODO: Rendre générique la gestion de dates. Au lieu de couvrir tous les formats manipulés par le projet.
+func GetDayDelta(d string, delta int) (string){
 	t, err := time.Parse("2006-01-02T15:04Z", d)
 	if err != nil {
-		// Forcément c'est l'autre format		
 		t, err = time.Parse("2006-01-02 15:04:05", d)
+
 		if err != nil {
-			log.Printf("Erreur de Parse dans getDayBefore : %v", err)
+			// Forcément c'est l'autre format		
+			t, err = time.Parse("2006-01-02T15:04:05Z", d)
+
+			if err != nil{
+					log.Printf("[utils.GetDayDelta] : Erreur de Parse dans getDayBefore : %v", err)
+			}
 		}
 	}
 
-	return t.AddDate(0, 0, delta).Format("20060102")
+	return t.AddDate(0, 0, delta).Format(DateLayout)
 }
 
 // Avec l'api il se peut que les données sont stocké avec un accès à la date
 // exacte, le jours d'avant ou d'après, d'après la localisation de l'évènement.
 func fetchRightDate(d string) (ESPNScoreboardResponse, error) {
-	scoreBoard, err := fetchByDate(getDayDelta(d, 0))
+	scoreBoard, err := fetchByDate(GetDayDelta(d, 0))
 	if len(scoreBoard.Events) != 0 {
 		return scoreBoard, err
 	}
 	// on teste avec le jour d'avant
-	scoreBoard, err = fetchByDate(getDayDelta(d, -1))
+	scoreBoard, err = fetchByDate(GetDayDelta(d, -1))
 	if len(scoreBoard.Events) != 0 {
 		return scoreBoard, err
 	}
 	// on teste avec le jour d'avant
-	scoreBoard, err = fetchByDate(getDayDelta(d, 1))
+	scoreBoard, err = fetchByDate(GetDayDelta(d, 1))
 	if len(scoreBoard.Events) != 0 {
 		return scoreBoard, err
 	}

@@ -270,7 +270,8 @@ func GetFightAndCardStatus(qM QueryMaker, fightID int) (*sql.Row) {
 			fights.fighter1_id,
 			fights.fighter2_id,
 			fights.completed,
-			cards.completed
+			cards.completed,
+			cards.date
 		FROM fights
 		JOIN cards ON cards.id = fights.card_id
 		WHERE fights.id = $1

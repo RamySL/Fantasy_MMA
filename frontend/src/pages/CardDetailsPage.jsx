@@ -129,7 +129,7 @@ export default function CardDetailsPage() {
 
     try {
       await predictionService.saveCardPredictions(id, selectedPredictions);
-      setSaveMessage("Predictions sauvegardees.");
+      setSaveMessage("Prédictions sauvegardées.");
     } catch (err) {
       setError(err.message || "Impossible de sauvegarder les predictions.");
     } finally {
@@ -150,7 +150,6 @@ export default function CardDetailsPage() {
   }
 
   const location = getLocation(card);
-
   return (
     <div className="space-y-6">
       <Link to="/cards" className="btn-ghost px-0">
@@ -166,11 +165,12 @@ export default function CardDetailsPage() {
             </div>
             <h1 className="mt-4 text-3xl font-black tracking-tight text-slate-950">{card.title}</h1>
             <p className="mt-3 text-sm text-slate-600">{formatDate(card.date)}</p>
+            <p className="mt-3 text-sm text-slate-600">Fin des prédictions le : {formatDate(card.end_predictions_date)}</p>
             <p className="mt-2 text-sm text-slate-500">{location || "Lieu a confirmer"}</p>
           </div>
 
           <button type="button" className="btn-primary" disabled={summary.selectedCount === 0 || isSaving} onClick={handleSavePredictions}>
-            {isSaving ? "Sauvegarde..." : "Enregistrer mes predictions"}
+            {isSaving ? "Sauvegarde..." : "Enregistrer mes prédictions"}
           </button>
         </div>
       </section>
