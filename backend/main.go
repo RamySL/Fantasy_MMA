@@ -14,7 +14,7 @@ func main(){
 
 	// Remplissage initale de la base
 	go func(){
-		err := espn.Sync(true)
+		err := espn.InitialSync()
 		if err != nil{
 			log.Printf("[main] : erreur synchronisation init : %v ", err)
 		}

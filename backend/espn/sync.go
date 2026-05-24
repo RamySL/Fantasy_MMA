@@ -1,6 +1,7 @@
 package espn
 
 import (
+	"database/sql"
 	"fantasy/database"
 	"fmt"
 	"log"
@@ -27,67 +28,42 @@ func SyncTicker(lunchHour int, period time.Duration) {
 	time.Sleep(sleepDuration)
  
 	// L'heure voulue est atteinte
-	if err := Sync(false); err != nil { 
+	if err := UpdateSync(); err != nil { 
 		log.Printf("[SyncTicker Erreur] : %v\n", err)
 	}
+	
 	t := time.NewTicker(period)
 	for range t.C {
 		log.Println("Début de la synchronisation périodique...")
-		if err := Sync(false); err != nil {
+		if err := UpdateSync(); err != nil {
 			log.Printf("[SyncTicker Erreur] : %v\n", err)
 		}
 	}
 }
 
-// fonction principale d'actualisation des tables de base de données.
-// Fetch les prochaines cartes à travers l'api et insert dans la base : les cartes, les combats, les combattant.
-// et actualise les résultat de prédictions
-func Sync(initial bool) error {
-	// Note: important de récupérer la prochaine avant d'actualiser la BDD.
-	// Sinon le 'STATUS_SCHEDUDLED' sera écrasé
-	nextCard, err := database.ScanCard(database.GetNextCard(database.DB)) 
-	if err != nil {
-		return err
-	}
+// InitialSync télécharge toutes les cartes de l'année et remplit une base de données vierge.
+func InitialSync() error {
+	log.Println("[InitialSync] Démarrage de la synchronisation initiale...")
 
 	scoreBoard, err := fetch()
 	if err != nil {
 		return err
 	}
 	if len(scoreBoard.Leagues) == 0 {
-		return fmt.Errorf("Sync: aucune league trouvée dans la réponse ESPN")
+		return fmt.Errorf("InitialSync: aucune league trouvée dans la réponse ESPN")
 	}
 
-    parsedNextDate, err := time.Parse(DateLayout, GetDayDelta(nextCard.Date, 0))
-    if err != nil {
-        fmt.Println("[sync.sync] next card parse:", err)
-        return err
-    }
-	//CAREFUL: Leagues est supposé être singleton
 	calendars := scoreBoard.Leagues[0].Calendar
-	// On parcourt les carte de combat pour le clendrier de l'année en cours
 	for _, calendar := range calendars {
-
 		eventDate := calendar.StartDate
-		parsedDate, err := time.Parse(DateLayout, GetDayDelta(eventDate, 0))
-		if err != nil {
-			fmt.Println("[sync.sync] parse:", err)
-			continue
-		}
-		// évenement terminé
-		if !initial && parsedDate.Before(parsedNextDate){
-			continue
-		}
-
+		
 		scoreBoard2, err := fetchRightDate(eventDate)
 		if err != nil {
-			return err
+			log.Printf("[InitialSync] Erreur fetch %s: %v\n", eventDate, err)
+			continue
 		}
-
 		if len(scoreBoard2.Events) == 0 {
-			return fmt.Errorf("Sync: aucun event trouvé pour la date %s", eventDate)
-		}else{
-			log.Printf("Event trouvé pour : %s", eventDate)
+			continue
 		}
 
 		//CAREFUL: Events est supposé être singleton
@@ -120,15 +96,103 @@ func Sync(initial bool) error {
 		if err != nil {
 			return err
 		}
+		
+		log.Printf("Event initialisé : %s\n", eventDate)
 	}
 
-	// traitement des combats annulés
+	log.Println("[InitialSync] Synchronisation initiale terminée avec succès.")
+	return nil
+}
+
+// UpdateSync actualise la base de données à partir de la prochaine carte prévue.
+// Gère les prédictions et les combats annulés.
+func UpdateSync() error {
+
+	nextCard, err := database.ScanCard(database.GetNextCard(database.DB)) 
+	if err != nil {
+		if err == sql.ErrNoRows {
+			log.Println("[UpdateSync] Base vide détectée (Erreur ErrNoRows). Lancement d'une InitialSync à la place.")
+			return InitialSync()
+		}
+		return err
+	}
+
+	parsedNextDate, err := time.Parse(DateLayout, GetDayDelta(nextCard.Date, 0))
+	if err != nil {
+		fmt.Println("[UpdateSync] next card parse erreur:", err)
+		return err
+	}
+
+	scoreBoard, err := fetch()
+	if err != nil {
+		return err
+	}
+	if len(scoreBoard.Leagues) == 0 {
+		return fmt.Errorf("UpdateSync: aucune league trouvée dans la réponse ESPN")
+	}
+
+	calendars := scoreBoard.Leagues[0].Calendar
+	for _, calendar := range calendars {
+
+		eventDate := calendar.StartDate
+		parsedDate, err := time.Parse(DateLayout, GetDayDelta(eventDate, 0))
+		if err != nil {
+			fmt.Println("[UpdateSync] parse erreur:", err)
+			continue
+		}
+		
+		// On ignore les événements passés
+		if parsedDate.Before(parsedNextDate) {
+			continue
+		}
+
+		scoreBoard2, err := fetchRightDate(eventDate)
+		if err != nil {
+			return err
+		}
+
+		if len(scoreBoard2.Events) == 0 {
+			continue
+		} else {
+			log.Printf("Event mis à jour pour : %s", eventDate)
+		}
+
+		//CAREFUL: Events est supposé être singleton
+		event := scoreBoard2.Events[0]
+		
+		venue := emptyVenue()
+		if len(event.Venues) != 0 {
+			//CAREFUL
+			venue = event.Venues[0]
+		}
+		
+		// Insertion de carte
+		card, err := database.UpsertCard(
+			database.DB, 
+			event.ID, 
+			event.Name, 
+			eventDate, 
+			event.Status.Type.Name,
+			event.Status.Type.Completed,
+			venue.FullName,
+			venue.Address.City,
+			venue.Address.State,
+			venue.Address.Country,
+		)
+		if err != nil {
+			return err
+		}
+		
+		// Insertion de combats et combattants
+		err = syncFights(card, event.Competitions)
+		if err != nil {
+			return err
+		}
+	}
+
+	// 4. Traitement des annulations et prédictions
 	assureCardCoherent(nextCard)	
-
-	// MAJ des scores par rapports aux prédicitions
-	// Précondition respectée
 	return syncPredictions(nextCard)
-
 }
 
 // remplie les tables `fighters` et `fights`.
