@@ -3,7 +3,7 @@ package main
 import (
 	"fantasy/database"
 	"fantasy/espn"
-	"time"
+	//"time"
 	"fantasy/server"
 )
 
@@ -12,8 +12,8 @@ func main(){
 	database.InitDB()
 
 	go func ()  {
-		espn.SyncTicker(21, time.Hour * 1)
-		//espn.Sync()
+		//espn.SyncTicker(21, time.Hour * 1)
+		espn.Sync()
 	}()
 	
 

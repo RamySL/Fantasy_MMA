@@ -232,6 +232,26 @@ func GetNextCard(qM QueryMaker) (*sql.Row) {
 }
 
 /**
+Fights
+*/
+
+func GetFightByCardID(qM QueryMaker, cardID int)(*sql.Rows, error){	
+	return qM.Query(`
+			SELECT 
+				fights.id,
+				fights.external_id,
+				fights.points_good_prediction,
+				fights.status
+				
+			FROM fights
+			WHERE card_id = $1;
+		`,
+		cardID,
+		)
+}
+
+
+/**
 Predictions
 */
 
@@ -331,6 +351,22 @@ func GetCardPredictionsMe(qM QueryMaker, userID int, cardID int) (*sql.Rows, err
 	`, userID, cardID)
 }
 
+func UpdatePrediction	(qM QueryMaker, 
+						pointsGoodPrediction int, 
+						fightID int, 
+						officialWinnerExternalID string)(sql.Result, error) {
+	return qM.Exec(`
+				UPDATE predictions p
+					SET points_obtained = $1
+				FROM 	fighters f
+				WHERE 	p.fight_id = $2 
+						AND f.external_id = $3
+						AND p.predicted_winner_id = f.id
+				;
+			`,
+			pointsGoodPrediction, fightID, officialWinnerExternalID,
+			)
+}
 /**
 Auth
 */

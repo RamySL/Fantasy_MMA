@@ -14,14 +14,14 @@ const leagueUFC = "/leagues/ufc"
 // TBA : to be assigned
 const TbaFighterName = "TBA"
 
-// Récupere le scoreboard ESPN general de l'UFC.
-func Fetch() (ESPNScoreboardResponse, error) {
+// Récupere le scoreboard ESPN général de l'UFC càd tous les évenements de la saisons courante.
+func fetch() (ESPNScoreboardResponse, error) {
 	return fetchScoreboard(siteBaseURL + "/scoreboard")
 }
 
 // Récupère le scoreboard ESPN pour une date precise.
 // Format attendu par ESPN : YYYYMMDD, par exemple "20260502".
-func FetchByDate(date string) (ESPNScoreboardResponse, error) {
+func fetchByDate(date string) (ESPNScoreboardResponse, error) {
 	return fetchScoreboard(siteBaseURL + "/scoreboard?dates=" + date)
 }
 

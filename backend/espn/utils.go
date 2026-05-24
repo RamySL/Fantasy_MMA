@@ -22,7 +22,11 @@ func upsertFighter (tx *sql.Tx, athlete ESPNAthlete, records []ESPNRecord) (int,
 func getDayDelta(d string, delta int) (string){
 	t, err := time.Parse("2006-01-02T15:04Z", d)
 	if err != nil {
-		log.Printf("Erreur de Parse dans getDayBefore : ", err)
+		// Forcément c'est l'autre format		
+		t, err = time.Parse("2006-01-02 15:04:05", d)
+		if err != nil {
+			log.Printf("Erreur de Parse dans getDayBefore : %v", err)
+		}
 	}
 
 	return t.AddDate(0, 0, delta).Format("20060102")
@@ -31,17 +35,17 @@ func getDayDelta(d string, delta int) (string){
 // Avec l'api il se peut que les données sont stocké avec un accès à la date
 // exacte, le jours d'avant ou d'après, d'après la localisation de l'évènement.
 func fetchRightDate(d string) (ESPNScoreboardResponse, error) {
-	scoreBoard, err := FetchByDate(getDayDelta(d, 0))
+	scoreBoard, err := fetchByDate(getDayDelta(d, 0))
 	if len(scoreBoard.Events) != 0 {
 		return scoreBoard, err
 	}
 	// on teste avec le jour d'avant
-	scoreBoard, err = FetchByDate(getDayDelta(d, -1))
+	scoreBoard, err = fetchByDate(getDayDelta(d, -1))
 	if len(scoreBoard.Events) != 0 {
 		return scoreBoard, err
 	}
 	// on teste avec le jour d'avant
-	scoreBoard, err = FetchByDate(getDayDelta(d, 1))
+	scoreBoard, err = fetchByDate(getDayDelta(d, 1))
 	if len(scoreBoard.Events) != 0 {
 		return scoreBoard, err
 	}
@@ -96,5 +100,43 @@ func emptyVenue() ESPNVenue {
 			State:   "",
 			Country: "",
 		},
+	}
+}
+
+// L'api d'après tests peut laisser des combats annulés pendant certains jours en tant que "STATUS_SCHEDULED"
+// et l'API ne donne pas explicitement un STATUS_CANCELED, donc cette fonction fait ce traitement
+func assureCardCoherent(card database.Card){
+
+	fightsRows, err := database.GetCardFights(database.DB, card.ID)
+
+	if err != nil {
+		log.Printf("[sync.makeCardsCoherent] : Erreur dans la récupération de carte %v", err)
+	}else{
+		for fightsRows.Next() {
+			fight, err := database.ScanFight(fightsRows)
+			if err != nil {
+				log.Printf("sync.makeCardsCoherent : Erreur Scan %v", err)
+				continue
+			}
+			// NOTE: Carte terminée && Combat non terminé => combat annulé.
+			//  l'API ne donne pas explicitement un STATUS_CANCELED
+			if !fight.Completed && card.Completed {
+				fight.Status = "STATUS_CANCELED"
+				
+				database.UpsertFight(
+					database.DB, 
+					fight.ExternalID, 
+					card.ID, 
+					fight.Fighter1.ID,
+					fight.Fighter2.ID,
+					fight.Winner,
+					fight.Category,
+					fight.Status,
+					fight.Completed,
+					10, //TODO: faire une logique pour les points à gagner
+					)
+			}
+
+		}
 	}
 }

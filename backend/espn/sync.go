@@ -1,7 +1,6 @@
 package espn
 
 import (
-	"database/sql"
 	"fantasy/database"
 	"fmt"
 	"log"
@@ -39,8 +38,10 @@ func SyncTicker(lunchHour int, period time.Duration) {
 		}
 	}
 }
-// Fetch les cartes entières à travers l'api et insert dans la base : les cartes, les combats, les combattant.
-//TODO: améliorer pour récup moins de cartes de manière redondante
+
+// fonction principale d'actualisation des tables de base de données.
+// Fetch les prochaines cartes à travers l'api et insert dans la base : les cartes, les combats, les combattant.
+// et actualise les résultat de prédictions
 func Sync() error {
 	// Note: important de récupérer la prochaine avant d'actualiser la BDD.
 	// Sinon le 'STATUS_SCHEDUDLED' sera écrasé
@@ -49,25 +50,34 @@ func Sync() error {
 		return err
 	}
 
-	tx, err := database.DB.Begin()
-	if err != nil {
-		return err
-	}
-
-	defer tx.Rollback()
-
-	scoreBoard, err := Fetch()
+	scoreBoard, err := fetch()
 	if err != nil {
 		return err
 	}
 	if len(scoreBoard.Leagues) == 0 {
 		return fmt.Errorf("Sync: aucune league trouvée dans la réponse ESPN")
 	}
+
+    parsedNextDate, err := time.Parse("20060102", getDayDelta(nextCard.Date, 0))
+    if err != nil {
+        fmt.Println("[sync.sync] next card parse:", err)
+        return err
+    }
 	//CAREFUL: Leagues est supposé être singleton
 	calendars := scoreBoard.Leagues[0].Calendar
+	// On parcourt les carte de combat pour le clendrier de l'année en cours
 	for _, calendar := range calendars {
 
 		eventDate := calendar.StartDate
+		parsedDate, err := time.Parse("20060102", getDayDelta(eventDate, 0))
+		if err != nil {
+			fmt.Println("[sync.sync] parse:", err)
+			continue
+		}
+		// évenement terminé
+		if parsedDate.Before(parsedNextDate){
+			continue
+		}
 
 		scoreBoard2, err := fetchRightDate(eventDate)
 		if err != nil {
@@ -91,7 +101,7 @@ func Sync() error {
 		
 		// Insertion de carte
 		card, err := database.UpsertCard(
-			tx, 
+			database.DB, 
 			event.ID, 
 			event.Name, 
 			eventDate, 
@@ -106,81 +116,80 @@ func Sync() error {
 			return err
 		}
 		// Insertion de combats et combattants
-		err = syncFights(tx, card, event.Competitions)
+		err = syncFights(card, event.Competitions)
 		if err != nil {
 			return err
 		}
 	}
 
-	// Cohérence de la base par rapport aux combats annulé
-	cardsRows, err := database.GetCards(database.DB)
+	// traitement des combats annulés
+	assureCardCoherent(nextCard)	
+
+	// MAJ des scores par rapports aux prédicitions
+	// Précondition respectée
+	return syncPredictions(nextCard)
+
+}
+
+// remplie les tables `fighters` et `fights`.
+// Si une des insertions échoue toutes les autres sont annulées.
+func syncFight(compet ESPNCompetition, card database.Card) error {
+	// Insertion combattant num 1
+	c1 := compet.Competitors[0];
+	c2 := compet.Competitors[1];  
+
+	athlete1, err := fetchAthlete(c1.ID)
+	if (err != nil) { return err }
+	athlete2, err := fetchAthlete(c2.ID)
+	if (err != nil) { return err }
+
+	// Combat vide 
+	if 	strings.Contains(athlete1.FullName, TbaFighterName) || 
+		strings.Contains(athlete2.FullName, TbaFighterName) {
+
+		return nil
+	}
+
+	tx, err := database.DB.Begin()
 	if err != nil {
-		//TODO: Faire partir tout de la tx ?
 		return err
 	}
-	for cardsRows.Next() {
-		card, err := database.ScanCard(cardsRows)
-		if err != nil {
-			log.Printf("[sync.Sync] : cardsRows Scan : %v", err)
-		}
 
-		assureCardCoherent(card)
+	defer tx.Rollback()
+
+	c1ID, err := upsertFighter(tx, athlete1, c1.Records)
+	if err != nil {
+		return err
 	}
-	
-	// MAJ des scores par rapports aux prédicitions
-	//TODO: erreur non catch
-	syncPredictions(nextCard)
+	c2ID, err := upsertFighter(tx, athlete2, c2.Records)
+	if err != nil {
+		return err
+	}
+
+	_, err = database.UpsertFight(
+		tx, 
+		compet.ID, 
+		card.ID, 
+		c1ID,
+		c2ID,
+		getWinner(compet, c1, c1ID, c2ID),
+		compet.Type.Abbreviation,
+		compet.Status.Type.Name,
+		compet.Status.Type.Completed,
+		10, //TODO: faire une logique pour les points à gagner
+	)
+	if err != nil {
+		return err
+	}
 
 	return tx.Commit()
 }
 
 // Fetch les combats à travers l'api et remplie les tables `fighters` et `fights`
-func syncFights(tx *sql.Tx, card database.Card, competitions []ESPNCompetition) error {
-
+func syncFights(card database.Card, competitions []ESPNCompetition) error {
+	// competition ~= fight
 	for _, competition := range competitions {
-		// Insertion combattant num 1
-		c1 := competition.Competitors[0];
-		c2 := competition.Competitors[1];  
-
-		athlete1, err := fetchAthlete(c1.ID)
-		if (err != nil) { return err }
-		athlete2, err := fetchAthlete(c2.ID)
-		if (err != nil) { return err }
-	
-
-		if 	strings.Contains(athlete1.FullName, TbaFighterName) || 
-			strings.Contains(athlete2.FullName, TbaFighterName) {
-
-			continue
-		}
-
-		c1ID, err := upsertFighter(tx, athlete1, c1.Records)
-		if err != nil {
-			return err
-		}
-		c2ID, err := upsertFighter(tx, athlete2, c2.Records)
-		if err != nil {
-			return err
-		}
-
-		// NOTE: Carte terminée && Combat non terminé => combat annulé.
-		//  l'API ne donne pas explicitement un STATUS_CANCELED
-		if !competition.Status.Type.Completed && card.Completed {
-			competition.Status.Type.Name = "STATUS_CANCELED"
-		}
-
-		_, err = database.UpsertFight(
-			tx, 
-			competition.ID, 
-			card.ID, 
-			c1ID,
-			c2ID,
-			getWinner(competition, c1, c1ID, c2ID),
-			competition.Type.Abbreviation,
-			competition.Status.Type.Name,
-			competition.Status.Type.Completed,
-			10, //TODO: faire une logique pour les points à gagner
-		)
+		err := syncFight(competition, card)
 		if err != nil {
 			return err
 		}
@@ -202,19 +211,8 @@ func syncPredictions(nextCard database.Card) error{
 		
 		var fightID, pointsGoodPrediction int 
 		var fightExternalID, status string
-		// TODO : délègue la requête à database
-		fightRows, err := database.DB.Query(`
-			SELECT 
-				fights.id,
-				fights.external_id,
-				fights.points_good_prediction,
-				fights.status
-				
-			FROM fights
-			WHERE card_id = $1;
-		`,
-		nextCard.ID,
-		)
+
+		fightRows, err := database.GetFightByCardID(database.DB, nextCard.ID)
 		if err != nil {
 			return err
 		}
@@ -235,17 +233,7 @@ func syncPredictions(nextCard database.Card) error{
 				continue
 			}
 			// Toutes les prédictions sur le combat 'fight_id' sont màj
-			_, err := database.DB.Exec(`
-				UPDATE predictions p
-					SET points_obtained = $1
-				FROM 	fighters f
-				WHERE 	p.fight_id = $2 
-						AND f.external_id = $3
-						AND p.predicted_winner_id = f.id
-				;
-			`,
-			pointsGoodPrediction, fightID, officialWinnerExternalID,
-			)
+			_, err := database.UpdatePrediction(database.DB, pointsGoodPrediction, fightID, officialWinnerExternalID)
 			if err != nil {
 				return err
 			}
@@ -253,44 +241,4 @@ func syncPredictions(nextCard database.Card) error{
 	}
 
 	return nil
-}
-
-// L'api d'après tests peut laisser des combats annulés pendant certains jours en tant que "STATUS_SCHEDULED"
-// mais aussi peut les retirer après complètement, auquel cas l fonction syncFights() n'aura pas d'effet.
-// D'où le rajout de cette fonction
-func assureCardCoherent(card database.Card){
-
-	fightsRows, err := database.GetCardFights(database.DB, card.ID)
-
-	if err != nil {
-		log.Printf("[sync.makeCardsCoherent] : Erreur dans la récupération de carte %v", err)
-	}else{
-		for fightsRows.Next() {
-			fight, err := database.ScanFight(fightsRows)
-			if err != nil {
-				log.Printf("sync.makeCardsCoherent : Erreur Scan %v", err)
-				continue
-			}
-			// NOTE: Carte terminée && Combat non terminé => combat annulé.
-			//  l'API ne donne pas explicitement un STATUS_CANCELED
-			if !fight.Completed && card.Completed {
-				fight.Status = "STATUS_CANCELED"
-				
-				database.UpsertFight(
-					database.DB, 
-					fight.ExternalID, 
-					card.ID, 
-					fight.Fighter1.ID,
-					fight.Fighter2.ID,
-					fight.Winner,
-					fight.Category,
-					fight.Status,
-					fight.Completed,
-					10, //TODO: faire une logique pour les points à gagner
-					)
-			}
-
-		}
-	}
-
 }
