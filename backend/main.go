@@ -11,8 +11,13 @@ func main(){
 
 	database.InitDB()
 
+	// Remplissage initale de la base
+	go func(){
+		espn.Sync(true)
+	}()
+	
 	//Actualisation de la base de données avec les résultats 
-	go func ()  {
+	go func () {
 		espn.SyncTicker(12, time.Hour * 1)
 	}()
 

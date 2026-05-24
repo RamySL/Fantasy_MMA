@@ -27,14 +27,13 @@ func SyncTicker(lunchHour int, period time.Duration) {
 	time.Sleep(sleepDuration)
  
 	// L'heure voulue est atteinte
-	log.Println("Début de la première synchronisation...") 
-	if err := sync(); err != nil { 
+	if err := Sync(false); err != nil { 
 		log.Printf("[SyncTicker Erreur] : %v\n", err)
 	}
 	t := time.NewTicker(period)
 	for range t.C {
 		log.Println("Début de la synchronisation périodique...")
-		if err := sync(); err != nil {
+		if err := Sync(false); err != nil {
 			log.Printf("[SyncTicker Erreur] : %v\n", err)
 		}
 	}
@@ -43,7 +42,7 @@ func SyncTicker(lunchHour int, period time.Duration) {
 // fonction principale d'actualisation des tables de base de données.
 // Fetch les prochaines cartes à travers l'api et insert dans la base : les cartes, les combats, les combattant.
 // et actualise les résultat de prédictions
-func sync() error {
+func Sync(initial bool) error {
 	// Note: important de récupérer la prochaine avant d'actualiser la BDD.
 	// Sinon le 'STATUS_SCHEDUDLED' sera écrasé
 	nextCard, err := database.ScanCard(database.GetNextCard(database.DB)) 
@@ -76,7 +75,7 @@ func sync() error {
 			continue
 		}
 		// évenement terminé
-		if parsedDate.Before(parsedNextDate){
+		if !initial && parsedDate.Before(parsedNextDate){
 			continue
 		}
 
