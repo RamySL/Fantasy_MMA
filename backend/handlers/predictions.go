@@ -43,6 +43,99 @@ func PredictionsRoutes(w http.ResponseWriter, req *http.Request) {
 	http.NotFound(w, req)
 }
 
+// Reçoit une liste de prédictions et les crée/met à jour en une seule requête.
+// Si une prédiction est invalide (combat terminé, prédictions fermées, combattant absent…),
+// toute la requête est rejetée
+func PredictionsBulk(w http.ResponseWriter, req *http.Request) {
+	if req.Method != http.MethodPost {
+		writeJsonError(w, http.StatusMethodNotAllowed, "Méthode non autorisée")
+		return
+	}
+
+	userID, ok := getAuthenticatedUserID(w, req)
+	if !ok {
+		return
+	}
+
+	var body BulkPredictionRequestBody
+	if err := json.NewDecoder(req.Body).Decode(&body); err != nil {
+		writeJsonError(w, http.StatusBadRequest, "JSON invalide")
+		return
+	}
+
+	if len(body.Predictions) == 0 {
+		writeJsonError(w, http.StatusBadRequest, "La liste de prédictions est vide")
+		return
+	}
+
+	// validation de toutes les prédictions avant les écritures
+	type validatedPrediction struct {
+		fightID           int
+		predictedWinnerID int
+	}
+	validated := make([]validatedPrediction, 0, len(body.Predictions))
+
+	for _, p := range body.Predictions {
+		if p.PredictedWinnerID <= 0 {
+			writeJsonError(w, http.StatusBadRequest, "predicted_winner_id invalide")
+			return
+		}
+
+		var fighter1ID, fighter2ID int
+		var fightCompleted, cardCompleted bool
+		var cardDate string
+
+		err := database.GetFightAndCardStatus(database.DB, p.FightID).Scan(
+			&fighter1ID,
+			&fighter2ID,
+			&fightCompleted,
+			&cardCompleted,
+			&cardDate,
+		)
+		if err != nil {
+			if err == sql.ErrNoRows {
+				writeJsonError(w, http.StatusNotFound, "Combat introuvable")
+				return
+			}
+			log.Printf("predictions.PredictionsBulk: erreur lecture combat %d: %v", p.FightID, err)
+			writeJsonError(w, http.StatusInternalServerError, "Erreur serveur interne")
+			return
+		}
+
+		parsedCardDate, _ := time.Parse(espn.DateLayout, espn.GetDayDelta(cardDate, 0))
+		if time.Now().After(parsedCardDate.AddDate(0, 0, -closePredictionsDeadline)) {
+			writeJsonError(w, http.StatusConflict, "Prédictions fermées")
+			return
+		}
+
+		if fightCompleted || cardCompleted {
+			writeJsonError(w, http.StatusConflict, "Impossible de modifier une prédiction sur un combat terminé")
+			return
+		}
+
+		if p.PredictedWinnerID != fighter1ID && p.PredictedWinnerID != fighter2ID {
+			writeJsonError(w, http.StatusBadRequest, "Le combattant choisi ne participe pas à ce combat")
+			return
+		}
+
+		validated = append(validated, validatedPrediction{
+			fightID:           p.FightID,
+			predictedWinnerID: p.PredictedWinnerID,
+		})
+	}
+
+	// Écriture en base
+	for _, p := range validated {
+		if _, err := database.UpsertPrediction(database.DB, userID, p.fightID, p.predictedWinnerID); err != nil {
+			log.Printf("[predictions.PredictionsBulk]: erreur upsert fight %d: %v", p.fightID, err)
+			writeJsonError(w, http.StatusInternalServerError, "Erreur sauvegarde prédiction")
+			return
+		}
+	}
+
+	writeJsonResponse(w, http.StatusOK, BulkPredictionResult{SavedCount: len(validated)})
+}
+
 func createOrUpdatePrediction(w http.ResponseWriter, req *http.Request) {
 	userID, ok := getAuthenticatedUserID(w, req)
 	if !ok {
@@ -63,7 +156,7 @@ func createOrUpdatePrediction(w http.ResponseWriter, req *http.Request) {
 
 	var fighter1ID, fighter2ID int
 	var fightCompleted, cardCompleted bool
-	var cardDate string;
+	var cardDate string
 
 	err = database.GetFightAndCardStatus(database.DB, body.FightID).Scan(
 		&fighter1ID,
@@ -88,7 +181,7 @@ func createOrUpdatePrediction(w http.ResponseWriter, req *http.Request) {
 	}
 
 	// Les prédictions se ferment un jour avant les combats
-	if time.Now().After(parsedCardDate.AddDate(0, 0, -closePredictionsDeadline)){
+	if time.Now().After(parsedCardDate.AddDate(0, 0, -closePredictionsDeadline)) {
 		writeJsonError(w, http.StatusConflict, "Prédictions fermées")
 		return
 	}

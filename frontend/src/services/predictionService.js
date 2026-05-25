@@ -14,28 +14,25 @@ export const predictionService = {
     // {
     //   [fightId]: fighterId
     // }
-    //
-    // Le backend actuel n'a pas de route bulk, donc on envoie une requete
-    // POST /predictions par combat selectionne.
     const predictions = Object.entries(selectedPredictions)
       .filter(([, fighterId]) => Boolean(fighterId))
       .map(([fightId, fighterId]) => ({
         fight_id: Number(fightId),
         predicted_winner_id: Number(fighterId),
       }));
-    //TODO: faire dans le backend une route qui prend une liste de prédictions.
-    await Promise.all(
-      predictions.map((prediction) =>
-        apiRequest("/predictions", {
-          method: "POST",
-          body: prediction,
-        }),
-      ),
-    );
+
+    if (predictions.length === 0) {
+      return { card_id: Number(cardId), saved_count: 0 };
+    }
+
+    const result = await apiRequest("/predictions/bulk", {
+      method: "POST",
+      body: { predictions },
+    });
 
     return {
       card_id: Number(cardId),
-      saved_count: predictions.length,
+      saved_count: result.saved_count,
     };
   },
 };

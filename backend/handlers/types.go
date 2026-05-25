@@ -18,9 +18,9 @@ type CardResponse struct {
 /* AUTH */
 
 type RegisterRequestBody struct {
-	Pseudo		string		`json:"pseudo"`
-	Email		string		`json:"email"`
-	Password	string		`json:"password"`
+	Pseudo   string `json:"pseudo"`
+	Email    string `json:"email"`
+	Password string `json:"password"`
 }
 
 type AuthUserResponse struct {
@@ -39,6 +39,16 @@ type LoginRequest struct {
 type PredictionRequestBody struct {
 	FightID           int `json:"fight_id"`
 	PredictedWinnerID int `json:"predicted_winner_id"`
+}
+
+// liste de prédictions à créer/mettre à jour en une seule fois.
+type BulkPredictionRequestBody struct {
+	Predictions []PredictionRequestBody `json:"predictions"`
+}
+
+// Résultat renvoyé après un upsert bulk.
+type BulkPredictionResult struct {
+	SavedCount int    `json:"saved_count"`
 }
 
 type CardPredictionResponse struct {

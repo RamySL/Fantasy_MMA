@@ -184,7 +184,7 @@ export default function CardDetailsPage() {
       )}
 
       {error && <ErrorMessage message={error} />}
-      {saveMessage && <ErrorMessage type="success" title="Pret pour le branchement" message={saveMessage} />}
+      {saveMessage && <ErrorMessage type="success" title="" message={saveMessage} />}
 
       <section className="grid gap-4 sm:grid-cols-3">
         <StatCard label="Combats" value={summary.totalFights} helper={`${summary.availableFights} encore selectionnables`} />
