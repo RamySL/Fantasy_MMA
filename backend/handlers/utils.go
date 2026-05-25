@@ -63,7 +63,8 @@ func setSessionCookie(w http.ResponseWriter, token string) {
 		Value:    token,
 		Path:     "/", // Le cookie sera envoyé pour toutes les routes proposées
 		HttpOnly: true,
-		SameSite: http.SameSiteLaxMode,
+		SameSite: http.SameSiteNoneMode,
+		Secure:   true,   // HTTPS
 		MaxAge:   7 * 24 * 60 * 60,
 	})
 }
@@ -88,8 +89,9 @@ func clearSessionCookie(w http.ResponseWriter) {
 		Value:    	"",
 		Path: 		"/",
 		HttpOnly: true,
-		SameSite: http.SameSiteLaxMode,
-		MaxAge:   -1,
+		Secure:   true,
+    	SameSite: http.SameSiteNoneMode,
+		MaxAge:   -1,	// suppresion immédiate par le client
 	})
 }
 

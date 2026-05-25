@@ -23,7 +23,10 @@ CREATE TABLE fighters (
     id SERIAL PRIMARY KEY,
     external_id TEXT NOT NULL UNIQUE,
     full_name TEXT NOT NULL,
-    record TEXT
+    record TEXT,
+    country_name TEXT,
+    country_flag TEXT,
+    fighter_image TEXT
 );
 
 CREATE TABLE fights (
