@@ -34,8 +34,5 @@ func main(){
 		}
 	}()
 
-	go func() {
-		
-	}
 	server.Start()
 }
