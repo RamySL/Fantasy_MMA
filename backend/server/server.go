@@ -59,6 +59,12 @@ func Start() {
 	// Ranking
 	mux.HandleFunc("/ranking", handlers.Ranking)
 
+	// ping 
+	mux.HandleFunc("/ping", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("OK"))
+	})
+
 	handlerCORS := corsMiddleware(mux)
 
 	port := os.Getenv("PORT")

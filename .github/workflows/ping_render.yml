@@ -1,0 +1,15 @@
+name: Keep Render Active
+
+on:
+  schedule:
+    - cron: "*/10 * * * *"
+
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Ping Render
+        run: curl -I https://fantasy-mma-api.onrender.com/ping
