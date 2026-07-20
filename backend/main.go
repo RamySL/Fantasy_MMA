@@ -2,7 +2,7 @@ package main
 
 import (
 	"fantasy/database"
-	"fantasy/espn"
+	"fantasy/espn_api"
 	"fantasy/server"
 	"log"
 	"time"

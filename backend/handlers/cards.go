@@ -3,7 +3,7 @@ package handlers
 import (
 	"database/sql"
 	"fantasy/database"
-	"fantasy/espn"
+	"fantasy/espn_api"
 	"log"
 	"net/http"
 	"strconv"

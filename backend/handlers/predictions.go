@@ -4,7 +4,7 @@ import (
 	"database/sql" // TODO: enlève la dépendance à sql (passage par fantasy/database)
 	"encoding/json"
 	"fantasy/database"
-	"fantasy/espn"
+	"fantasy/espn_api"
 	"log"
 	"net/http"
 	"strings"
